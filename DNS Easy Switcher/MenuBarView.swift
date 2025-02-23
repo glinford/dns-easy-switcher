@@ -218,7 +218,7 @@ struct MenuBarView: View {
         if let settings = dnsSettings.first {
             settings.isCloudflareEnabled = (type == .cloudflare)
             settings.isQuad9Enabled = (type == .quad9)
-            settings.isAdGuardEnabled = (type == .adguard)
+            settings.isAdGuardEnabled = type == .adguard ? true : nil
             if case .custom(let server) = type {
                 settings.activeCustomDNSID = server.id
             } else {
