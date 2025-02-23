@@ -1,5 +1,6 @@
 # DNS Easy Switcher
 A simple macOS menu bar app that allows you to quickly switch between different DNS providers (or add custom ones).
+
 ![Screenshot of DNS Easy Switcher](screenshot.png)
 
 ## Features
