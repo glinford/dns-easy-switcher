@@ -34,17 +34,20 @@ final class DNSSettings {
     @Attribute(.unique) var id: String
     var isCloudflareEnabled: Bool
     var isQuad9Enabled: Bool
+    var isAdGuardEnabled: Bool
     var activeCustomDNSID: String?
     var timestamp: Date
     
     init(id: String = UUID().uuidString,
          isCloudflareEnabled: Bool = false,
          isQuad9Enabled: Bool = false,
+         isAdGuardEnabled: Bool = false,
          activeCustomDNSID: String? = nil,
          timestamp: Date = Date()) {
         self.id = id
         self.isCloudflareEnabled = isCloudflareEnabled
         self.isQuad9Enabled = isQuad9Enabled
+        self.isAdGuardEnabled = isAdGuardEnabled
         self.activeCustomDNSID = activeCustomDNSID
         self.timestamp = timestamp
     }

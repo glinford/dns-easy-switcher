@@ -19,6 +19,17 @@ struct MenuBarView: View {
     var body: some View {
          Group {
              VStack {
+                 Toggle("AdGuard DNS", isOn: Binding(
+                     get: { dnsSettings.first?.isAdGuardEnabled ?? false },
+                     set: { newValue in
+                         if newValue && !isUpdating {
+                             activateDNS(type: .adguard)
+                         }
+                     }
+                   ))
+                   .padding(.horizontal)
+                   .disabled(isUpdating)
+                 
                  Toggle("Cloudflare DNS", isOn: Binding(
                      get: { dnsSettings.first?.isCloudflareEnabled ?? false },
                      set: { newValue in
@@ -136,6 +147,7 @@ struct MenuBarView: View {
         case none
         case cloudflare
         case quad9
+        case adguard
         case custom(CustomDNSServer)
         
         static func == (lhs: DNSType, rhs: DNSType) -> Bool {
@@ -145,6 +157,8 @@ struct MenuBarView: View {
             case (.cloudflare, .cloudflare):
                 return true
             case (.quad9, .quad9):
+                return true
+            case (.adguard, .adguard):
                 return true
             case (.custom(let lServer), .custom(let rServer)):
                 return lServer.id == rServer.id
@@ -159,7 +173,7 @@ struct MenuBarView: View {
         
         switch type {
         case .cloudflare:
-            DNSManager.shared.setCloudflare { success in
+            DNSManager.shared.setPredefinedDNS(dnsServers: DNSManager.shared.cloudflareServers) { success in
                 if success {
                     Task { @MainActor in
                         updateSettings(type: type)
@@ -168,7 +182,16 @@ struct MenuBarView: View {
                 isUpdating = false
             }
         case .quad9:
-            DNSManager.shared.setQuad9 { success in
+            DNSManager.shared.setPredefinedDNS(dnsServers: DNSManager.shared.quad9Servers) { success in
+                if success {
+                    Task { @MainActor in
+                        updateSettings(type: type)
+                    }
+                }
+                isUpdating = false
+            }
+        case .adguard:
+            DNSManager.shared.setPredefinedDNS(dnsServers: DNSManager.shared.adguardServers) { success in
                 if success {
                     Task { @MainActor in
                         updateSettings(type: type)
@@ -195,6 +218,7 @@ struct MenuBarView: View {
         if let settings = dnsSettings.first {
             settings.isCloudflareEnabled = (type == .cloudflare)
             settings.isQuad9Enabled = (type == .quad9)
+            settings.isAdGuardEnabled = (type == .adguard)
             if case .custom(let server) = type {
                 settings.activeCustomDNSID = server.id
             } else {
@@ -211,10 +235,11 @@ struct MenuBarView: View {
         }
     }
     
-    private func updateSettings(cloudflare: Bool, quad9: Bool) {
+    private func updateSettings(cloudflare: Bool, quad9: Bool, adguard: Bool) {
         if let settings = dnsSettings.first {
             settings.isCloudflareEnabled = cloudflare
             settings.isQuad9Enabled = quad9
+            settings.isAdGuardEnabled = adguard
             settings.timestamp = Date()
             try? modelContext.save()
         }
