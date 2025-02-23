@@ -7,6 +7,7 @@ A simple macOS menu bar app that allows you to quickly switch between different 
 - Easy switching between popular DNS providers:
   - Cloudflare DNS (1.1.1.1)
   - Quad9 DNS (9.9.9.9)
+  - AdGuard DNS (94.140.14.14)
 - Add and manage your own custom DNS servers
 - Native macOS menu bar integration
 - Persists your settings between app launches
@@ -48,6 +49,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## Acknowledgments
 - [Cloudflare DNS](https://1.1.1.1) for their public DNS service
 - [Quad9](https://quad9.net) for their secure DNS service
+- [AdGuard](https://adguard-dns.io/en/welcome.html) for their public DNS service
 
 ## Privacy
 DNS Easy Switcher does not collect any data. All settings are stored locally on your device.

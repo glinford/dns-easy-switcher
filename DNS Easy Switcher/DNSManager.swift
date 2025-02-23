@@ -11,18 +11,25 @@ import AppKit
 class DNSManager {
     static let shared = DNSManager()
     
-    private let cloudflareServers = [
+    let cloudflareServers = [
         "1.1.1.1",           // IPv4 Primary
         "1.0.0.1",           // IPv4 Secondary
         "2606:4700:4700::1111",  // IPv6 Primary
         "2606:4700:4700::1001"   // IPv6 Secondary
     ]
     
-    private let quad9Servers = [
+    let quad9Servers = [
         "9.9.9.9",              // IPv4 Primary
         "149.112.112.112",      // IPv4 Secondary
         "2620:fe::fe",          // IPv6 Primary
         "2620:fe::9"            // IPv6 Secondary
+    ]
+    
+    let adguardServers = [
+        "94.140.14.14",       // IPv4 Primary
+        "94.140.15.15",       // IPv4 Secondary
+        "2a10:50c0::ad1:ff",  // IPv6 Primary
+        "2a10:50c0::ad2:ff"   // IPv6 Secondary
     ]
     
     private func getNetworkServices() -> [String] {
@@ -98,7 +105,7 @@ class DNSManager {
         return false
     }
     
-    func setCloudflare(completion: @escaping (Bool) -> Void) {
+    func setPredefinedDNS(dnsServers: [String], completion: @escaping (Bool) -> Void) {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self,
                   let service = self.findActiveService() else {
@@ -106,7 +113,7 @@ class DNSManager {
                 return
             }
             
-            let success = self.executePrivilegedCommand(arguments: ["-setdnsservers", service] + self.cloudflareServers)
+            let success = self.executePrivilegedCommand(arguments: ["-setdnsservers", service] + dnsServers)
             DispatchQueue.main.async { completion(success) }
         }
     }
@@ -125,19 +132,6 @@ class DNSManager {
             }
             
             let success = self.executePrivilegedCommand(arguments: ["-setdnsservers", service] + servers)
-            DispatchQueue.main.async { completion(success) }
-        }
-    }
-    
-    func setQuad9(completion: @escaping (Bool) -> Void) {
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            guard let self = self,
-                  let service = self.findActiveService() else {
-                DispatchQueue.main.async { completion(false) }
-                return
-            }
-            
-            let success = self.executePrivilegedCommand(arguments: ["-setdnsservers", service] + self.quad9Servers)
             DispatchQueue.main.async { completion(success) }
         }
     }
