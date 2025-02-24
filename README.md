@@ -50,6 +50,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 - [Cloudflare DNS](https://1.1.1.1) for their public DNS service
 - [Quad9](https://quad9.net) for their secure DNS service
 - [AdGuard DNS](https://adguard-dns.io/en/welcome.html) for their privacy-focused DNS service with ad blocking capabilities
+- [GetFlix](https://www.getflix.com.au/setup/dns-servers/) 
 
 ## Privacy
 DNS Easy Switcher does not collect any data. All settings are stored locally on your device.
