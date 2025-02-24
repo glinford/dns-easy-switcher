@@ -32,6 +32,34 @@ class DNSManager {
         "2a10:50c0::ad2:ff"   // IPv6 Secondary
     ]
     
+    let getflixServers: [String: String] = [
+        "Australia — Melbourne": "118.127.62.178",
+        "Australia — Perth": "45.248.78.99",
+        "Australia — Sydney 1": "54.252.183.4",
+        "Australia — Sydney 2": "54.252.183.5",
+        "Brazil — São Paulo": "54.94.175.250",
+        "Canada — Toronto": "169.53.182.124",
+        "Denmark — Copenhagen": "82.103.129.240",
+        "Germany — Frankfurt": "54.93.169.181",
+        "Great Britain — London": "212.71.249.225",
+        "Hong Kong": "119.9.73.44",
+        "India — Mumbai": "103.13.112.251",
+        "Ireland — Dublin": "54.72.70.84",
+        "Italy — Milan": "95.141.39.238",
+        "Japan — Tokyo": "172.104.90.123",
+        "Netherlands — Amsterdam": "46.166.189.67",
+        "New Zealand — Auckland 1": "120.138.27.84",
+        "New Zealand — Auckland 2": "120.138.22.174",
+        "Singapore": "54.251.190.247",
+        "South Africa — Johannesburg": "102.130.116.140",
+        "Spain — Madrid": "185.93.3.168",
+        "Sweden — Stockholm": "46.246.29.68",
+        "Turkey — Istanbul": "212.68.53.190",
+        "United States — Dallas (Central)": "169.55.51.86",
+        "United States — Oregon (West)": "54.187.61.200",
+        "United States — Virginia (East)": "54.164.176.2"
+    ]
+    
     private func getNetworkServices() -> [String] {
         let task = Process()
         task.launchPath = "/usr/sbin/networksetup"

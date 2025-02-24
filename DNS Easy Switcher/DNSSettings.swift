@@ -36,8 +36,7 @@ final class DNSSettings {
     var isQuad9Enabled: Bool
     var activeCustomDNSID: String?
     var timestamp: Date
-    
-    // Make the new property optional with a default value
+    var activeGetFlixLocation: String?
     var isAdGuardEnabled: Bool?
     
     init(id: String = UUID().uuidString,
@@ -45,7 +44,8 @@ final class DNSSettings {
          isQuad9Enabled: Bool = false,
          activeCustomDNSID: String? = nil,
          timestamp: Date = Date(),
-         isAdGuardEnabled: Bool? = false) {  // Default to false for new instances
+         isAdGuardEnabled: Bool? = false,
+         activeGetFlixLocation: String? = nil) {
         self.id = id
         self.isCloudflareEnabled = isCloudflareEnabled
         self.isQuad9Enabled = isQuad9Enabled
