@@ -90,47 +90,41 @@ class DNSManager {
     }
     
     private func executePrivilegedCommand(arguments: [String]) -> Bool {
-        guard let service = findActiveService() else { return false }
-        
-        // Properly escape the arguments for AppleScript
-        let escapedArgs = arguments.map { arg in
-            return "\\\"" + arg.replacingOccurrences(of: "\\", with: "\\\\")
-                .replacingOccurrences(of: "\"", with: "\\\"") + "\\\""
-        }.joined(separator: " ")
-        
-        let scriptText = """
-        do shell script "/usr/sbin/networksetup \(escapedArgs)" with administrator privileges
-        """
-        
-        var error: NSDictionary?
-        if let scriptObject = NSAppleScript(source: scriptText) {
-            if scriptObject.executeAndReturnError(&error) != nil {
-                // Also set IPv6 DNS if we successfully set IPv4
-                if arguments[0] == "-setdnsservers" {
-                    _ = executeIPv6Command(service: service, isDisabling: arguments.contains("empty"))
+            guard let service = findActiveService() else { return false }
+            
+            // Properly escape the arguments for AppleScript
+            let escapedArgs = arguments.map { arg in
+                return "\\\"" + arg.replacingOccurrences(of: "\\", with: "\\\\")
+                    .replacingOccurrences(of: "\"", with: "\\\"") + "\\\""
+            }.joined(separator: " ")
+            
+            // Combine IPv4 and IPv6 commands in a single script if we're setting DNS
+            let isSettingDNS = arguments[0] == "-setdnsservers"
+            let isDisabling = arguments.contains("empty")
+            
+            let commandScript: String
+            if isSettingDNS {
+                // Combine DNS and IPv6 commands with semicolons in a single admin privilege request
+                let ipv6Script = "/usr/sbin/networksetup -setv6off '\(service)'; /usr/sbin/networksetup -setv6automatic '\(service)'"
+                commandScript = """
+                do shell script "/usr/sbin/networksetup \(escapedArgs); \(ipv6Script)" with administrator privileges with prompt "DNS Easy Switcher needs to modify network settings"
+                """
+            } else {
+                // For other commands, keep as is
+                commandScript = """
+                do shell script "/usr/sbin/networksetup \(escapedArgs)" with administrator privileges with prompt "DNS Easy Switcher needs to modify network settings"
+                """
+            }
+            
+            var error: NSDictionary?
+            if let scriptObject = NSAppleScript(source: commandScript) {
+                if scriptObject.executeAndReturnError(&error) != nil {
+                    return true
+                } else if let error = error {
+                    print("Error executing privileged command: \(error)")
                 }
-                return true
-            } else if let error = error {
-                print("Error executing privileged command: \(error)")
             }
-        }
-        return false
-    }
-    
-    private func executeIPv6Command(service: String, isDisabling: Bool) -> Bool {
-        let scriptText = """
-        do shell script "/usr/sbin/networksetup -setv6off '\(service)'; /usr/sbin/networksetup -setv6automatic '\(service)'" with administrator privileges
-        """
-        
-        var error: NSDictionary?
-        if let scriptObject = NSAppleScript(source: scriptText) {
-            if scriptObject.executeAndReturnError(&error) != nil {
-                return true
-            } else if let error = error {
-                print("Error executing IPv6 command: \(error)")
-            }
-        }
-        return false
+            return false
     }
     
     func setPredefinedDNS(dnsServers: [String], completion: @escaping (Bool) -> Void) {
