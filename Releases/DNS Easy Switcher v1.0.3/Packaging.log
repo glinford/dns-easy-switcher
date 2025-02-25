@@ -1,0 +1,91 @@
+2025-02-25 22:00:11 +0000  Initial pipeline context: <IDEDistributionProcessingPipelineContext: 0x12ff20ce0; archive(resolved)="<IDEArchive: 0x600008e05380>", distributionTask(resolved)="2", distributionDestination(resolved)="1", distributionMethod(resolved)="<IDEDistributionMethodDeveloperID: 0x60000a9d6ab0>", team(resolved)="<IDEProvisioningDisambiguatableBasicTeam: 0x6000071c8400; teamID='6645MJMX63', teamName='Gregory Linford', teamType='Individual', username='greglin19@gmail.com', isFreeProvisioningTeam='0'>">
+	Chain (13, self inclusive):
+	<IDEDistributionProcessingPipelineContext: 0x12ff20ce0; archive = "<IDEArchive: 0x600008e05380>", distributionMethod="<IDEDistributionMethodDeveloperID: 0x60000a9d6ab0>", team="<IDEProvisioningDisambiguatableBasicTeam: 0x6000071c8400; teamID='6645MJMX63', teamName='Gregory Linford', teamType='Individual', username='greglin19@gmail.com', isFreeProvisioningTeam='0'>">
+	<IDEDistributionProcessingPipelineContext: 0x12ff20a40; archive = "<IDEArchive: 0x600008e05380>", distributionMethod="<IDEDistributionMethodDeveloperID: 0x60000a9d6ab0>", team="<IDEProvisioningDisambiguatableBasicTeam: 0x6000071c8400; teamID='6645MJMX63', teamName='Gregory Linford', teamType='Individual', username='greglin19@gmail.com', isFreeProvisioningTeam='0'>">
+	<IDEDistributionContext: 0x1691170b0; archive = "<IDEArchive: 0x600008e05380>", distributionMethod="<IDEDistributionMethodDeveloperID: 0x60000a9d6ab0>", team="<IDEProvisioningDisambiguatableBasicTeam: 0x6000071c8400; teamID='6645MJMX63', teamName='Gregory Linford', teamType='Individual', username='greglin19@gmail.com', isFreeProvisioningTeam='0'>">
+	<IDEDistributionContext: 0x313e57e20; archive = "<IDEArchive: 0x600008e05380>", distributionMethod="<IDEDistributionMethodDeveloperID: 0x60000a9d6ab0>", team="<IDEProvisioningDisambiguatableBasicTeam: 0x6000071c8400; teamID='6645MJMX63', teamName='Gregory Linford', teamType='Individual', username='greglin19@gmail.com', isFreeProvisioningTeam='0'>">
+	<IDEDistributionContext: 0x10ba89ed0; archive = "<IDEArchive: 0x600008e05380>", distributionMethod="<IDEDistributionMethodDeveloperID: 0x60000a9d6ab0>", team="<IDEProvisioningDisambiguatableBasicTeam: 0x6000071c8400; teamID='6645MJMX63', teamName='Gregory Linford', teamType='Individual', username='greglin19@gmail.com', isFreeProvisioningTeam='0'>">
+	<IDEDistributionContext: 0x12ff143a0; archive = "<IDEArchive: 0x600008e05380>", distributionMethod="<IDEDistributionMethodDeveloperID: 0x60000a9d6ab0>", team="<IDEProvisioningDisambiguatableBasicTeam: 0x6000071c8400; teamID='6645MJMX63', teamName='Gregory Linford', teamType='Individual', username='greglin19@gmail.com', isFreeProvisioningTeam='0'>">
+	<IDEDistributionContext: 0x12ff13ff0; archive = "<IDEArchive: 0x600008e05380>", distributionMethod="<IDEDistributionMethodDeveloperID: 0x60000a9d6ab0>", team="<IDEProvisioningDisambiguatableBasicTeam: 0x6000071c8400; teamID='6645MJMX63', teamName='Gregory Linford', teamType='Individual', username='greglin19@gmail.com', isFreeProvisioningTeam='0'>">
+	<IDEDistributionContext: 0x12ff14900; archive = "<IDEArchive: 0x600008e05380>", distributionMethod="<IDEDistributionMethodDeveloperID: 0x60000a9d6ab0>", team="<IDEProvisioningDisambiguatableBasicTeam: 0x6000071c8400; teamID='6645MJMX63', teamName='Gregory Linford', teamType='Individual', username='greglin19@gmail.com', isFreeProvisioningTeam='0'>">
+	<IDEDistributionContext: 0x10bafd670; archive = "<IDEArchive: 0x600008e05380>", distributionMethod="<IDEDistributionMethodDeveloperID: 0x60000a9d6ab0>", team="<IDEProvisioningDisambiguatableBasicTeam: 0x6000071c8400; teamID='6645MJMX63', teamName='Gregory Linford', teamType='Individual', username='greglin19@gmail.com', isFreeProvisioningTeam='0'>">
+	<IDEDistributionContext: 0x3231a3910; archive = "<IDEArchive: 0x600008e05380>", distributionMethod="<IDEDistributionMethodDeveloperID: 0x60000a9d6ab0>", team="(null)">
+	<IDEDistributionContext: 0x362b199e0; archive = "<IDEArchive: 0x600008e05380>", distributionMethod="<IDEDistributionMethodDeveloperID: 0x60000a9d6ab0>", team="(null)">
+	<IDEDistributionContext: 0x323321b70; archive = "<IDEArchive: 0x600008e05380>", distributionMethod="(null)", team="(null)">
+	<IDEDistributionContext: 0x33f8d9800; archive = "<IDEArchive: 0x600008e05380>", distributionMethod="(null)", team="(null)">
+</IDEDistributionProcessingPipelineContext: 0x12ff20ce0>
+2025-02-25 22:00:11 +0000  Processing step: IDEDistributionCreateDestRootStep
+2025-02-25 22:00:11 +0000  Processing step: IDEDistributionCopyItemStep
+2025-02-25 22:00:11 +0000  Running /usr/bin/ditto '-V' '/Users/glinf/Library/Developer/Xcode/Archives/2025-02-25/DNS Easy Switcher 25-02-2025, 22.59.xcarchive/Products/Applications/DNS Easy Switcher.app' '/var/folders/33/r3mtzdn102x40vpjzrzm9kyh0000gn/T/XcodeDistPipeline.~~~8zKmE7/Root/Applications/DNS Easy Switcher.app'
+2025-02-25 22:00:11 +0000  >>> Copying /Users/glinf/Library/Developer/Xcode/Archives/2025-02-25/DNS Easy Switcher 25-02-2025, 22.59.xcarchive/Products/Applications/DNS Easy Switcher.app 
+2025-02-25 22:00:11 +0000  copying file ./Contents/_CodeSignature/CodeResources ... 
+2025-02-25 22:00:11 +0000  2672 bytes for ./Contents/_CodeSignature/CodeResources
+2025-02-25 22:00:11 +0000  copying file ./Contents/MacOS/DNS Easy Switcher ... 
+2025-02-25 22:00:11 +0000  664176 bytes for ./Contents/MacOS/DNS Easy Switcher
+2025-02-25 22:00:11 +0000  copying file ./Contents/Resources/AppIcon.icns ... 
+2025-02-25 22:00:11 +0000  67535 bytes for ./Contents/Resources/AppIcon.icns
+2025-02-25 22:00:11 +0000  copying file ./Contents/Resources/Assets.car ... 
+2025-02-25 22:00:11 +0000  745832 bytes for ./Contents/Resources/Assets.car
+2025-02-25 22:00:11 +0000  copying file ./Contents/Info.plist ... 
+2025-02-25 22:00:11 +0000  1572 bytes for ./Contents/Info.plist
+2025-02-25 22:00:11 +0000  copying file ./Contents/PkgInfo ... 
+2025-02-25 22:00:11 +0000  8 bytes for ./Contents/PkgInfo
+2025-02-25 22:00:11 +0000  /usr/bin/ditto exited with 0
+2025-02-25 22:00:11 +0000  Processing step: IDEDistributionEmbedProfileStep
+2025-02-25 22:00:11 +0000  Skipping profile for item: <IDEDistributionItem: 0x6000041be5e0; bundleID='com.linfordsoftware.dnseasyswitcher', path='<DVTFilePath:0x60000400ba30:'/Users/glinf/Library/Developer/Xcode/Archives/2025-02-25/DNS Easy Switcher 25-02-2025, 22.59.xcarchive/Products/Applications/DNS Easy Switcher.app'>', codeSigningInfo='<_DVTCodeSigningInformation_Path: 0x60000ca58eb0; isSigned='1', isAdHocSigned='0', signingCertificate='<DVTSigningCertificate: 0x6000011c8000; name='Apple Development: Gregory Linford (XGV4H982AX)', hash='75EA596AB87130E42C8EC49DCDCA8469458315F6', serialNumber='148CC429E2C0F0690B09BCCED6AB40F3', certificateKinds='(
+    "1.2.840.113635.100.6.1.12",
+    "1.2.840.113635.100.6.1.2"
+), issueDate='2025-02-23 14:00:58 +0000''>', entitlements='{
+}', teamID='6645MJMX63', identifier='com.linfordsoftware.dnseasyswitcher', executablePath='<DVTFilePath:0x600004009180:'/Users/glinf/Library/Developer/Xcode/Archives/2025-02-25/DNS Easy Switcher 25-02-2025, 22.59.xcarchive/Products/Applications/DNS Easy Switcher.app/Contents/MacOS/DNS Easy Switcher'>', hardenedRuntime='1'>'>
+2025-02-25 22:00:11 +0000  Processing step: IDEDistributionInfoPlistStep
+2025-02-25 22:00:11 +0000  Skipping step: IDEDistributionInfoPlistStep because it said so
+2025-02-25 22:00:11 +0000  Processing step: IDEDistributionAppThinningPlistStep
+2025-02-25 22:00:11 +0000  Processing step: IDEDistributionCompileBitcodeStep
+2025-02-25 22:00:11 +0000  Skipping step: IDEDistributionCompileBitcodeStep because it said so
+2025-02-25 22:00:11 +0000  Processing step: IDEDistributionCodeSlimmingStep
+2025-02-25 22:00:11 +0000  Processing step: IDEDistributionCopyBCSymbolMapsStep
+2025-02-25 22:00:11 +0000  Skipping step: IDEDistributionCopyBCSymbolMapsStep because it said so
+2025-02-25 22:00:11 +0000  Processing step: IDEDistributionSymbolsStep
+2025-02-25 22:00:11 +0000  Skipping step: IDEDistributionSymbolsStep because it said so
+2025-02-25 22:00:11 +0000  Processing step: IDEDistributionAppThinningStep
+2025-02-25 22:00:11 +0000  Skipping step: IDEDistributionAppThinningStep because it said so
+2025-02-25 22:00:11 +0000  Processing step: IDEDistributionArchThinningStep
+2025-02-25 22:00:11 +0000  Running /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/lipo '/var/folders/33/r3mtzdn102x40vpjzrzm9kyh0000gn/T/XcodeDistPipeline.~~~8zKmE7/Root/Applications/DNS Easy Switcher.app/Contents/MacOS/DNS Easy Switcher' '-verify_arch' 'arm64e'
+2025-02-25 22:00:11 +0000  /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/lipo exited with 1
+2025-02-25 22:00:11 +0000  Skipping architecture thinning for item "DNS Easy Switcher" because arch "arm64e" wasn't found
+2025-02-25 22:00:11 +0000  Processing step: IDEDistributionODRStep
+2025-02-25 22:00:11 +0000  Processing step: IDEDistributionStripXattrsStep
+2025-02-25 22:00:11 +0000  Skipping stripping extended attributes because the codesign step will strip them.
+2025-02-25 22:00:11 +0000  Processing step: IDEDistributionCodesignStep
+2025-02-25 22:00:11 +0000  Entitlements for <IDEDistributionItem: 0x6000041be5e0; bundleID='com.linfordsoftware.dnseasyswitcher', path='<DVTFilePath:0x60000400ba30:'/Users/glinf/Library/Developer/Xcode/Archives/2025-02-25/DNS Easy Switcher 25-02-2025, 22.59.xcarchive/Products/Applications/DNS Easy Switcher.app'>', codeSigningInfo='<_DVTCodeSigningInformation_Path: 0x60000ca58eb0; isSigned='1', isAdHocSigned='0', signingCertificate='<DVTSigningCertificate: 0x600001e7cf00; name='Apple Development: Gregory Linford (XGV4H982AX)', hash='75EA596AB87130E42C8EC49DCDCA8469458315F6', serialNumber='148CC429E2C0F0690B09BCCED6AB40F3', certificateKinds='(
+    "1.2.840.113635.100.6.1.12",
+    "1.2.840.113635.100.6.1.2"
+), issueDate='2025-02-23 14:00:58 +0000''>', entitlements='{
+}', teamID='6645MJMX63', identifier='com.linfordsoftware.dnseasyswitcher', executablePath='<DVTFilePath:0x600004009180:'/Users/glinf/Library/Developer/Xcode/Archives/2025-02-25/DNS Easy Switcher 25-02-2025, 22.59.xcarchive/Products/Applications/DNS Easy Switcher.app/Contents/MacOS/DNS Easy Switcher'>', hardenedRuntime='1'>'>: {
+}
+2025-02-25 22:00:11 +0000  Associated App Clip Identifiers Filter: Skipping because "com.apple.developer.associated-appclip-app-identifiers" is not present
+2025-02-25 22:00:11 +0000  Entitlements for <IDEDistributionItem: 0x6000041be5e0; bundleID='com.linfordsoftware.dnseasyswitcher', path='<DVTFilePath:0x60000400ba30:'/Users/glinf/Library/Developer/Xcode/Archives/2025-02-25/DNS Easy Switcher 25-02-2025, 22.59.xcarchive/Products/Applications/DNS Easy Switcher.app'>', codeSigningInfo='<_DVTCodeSigningInformation_Path: 0x60000ca58eb0; isSigned='1', isAdHocSigned='0', signingCertificate='<DVTSigningCertificate: 0x600001e7d980; name='Apple Development: Gregory Linford (XGV4H982AX)', hash='75EA596AB87130E42C8EC49DCDCA8469458315F6', serialNumber='148CC429E2C0F0690B09BCCED6AB40F3', certificateKinds='(
+    "1.2.840.113635.100.6.1.12",
+    "1.2.840.113635.100.6.1.2"
+), issueDate='2025-02-23 14:00:58 +0000''>', entitlements='{
+}', teamID='6645MJMX63', identifier='com.linfordsoftware.dnseasyswitcher', executablePath='<DVTFilePath:0x600004009180:'/Users/glinf/Library/Developer/Xcode/Archives/2025-02-25/DNS Easy Switcher 25-02-2025, 22.59.xcarchive/Products/Applications/DNS Easy Switcher.app/Contents/MacOS/DNS Easy Switcher'>', hardenedRuntime='1'>'> are: {
+}
+2025-02-25 22:00:11 +0000  Writing entitlements for <IDEDistributionItem: 0x6000041be5e0; bundleID='com.linfordsoftware.dnseasyswitcher', path='<DVTFilePath:0x60000400ba30:'/Users/glinf/Library/Developer/Xcode/Archives/2025-02-25/DNS Easy Switcher 25-02-2025, 22.59.xcarchive/Products/Applications/DNS Easy Switcher.app'>', codeSigningInfo='<_DVTCodeSigningInformation_Path: 0x60000ca58eb0; isSigned='1', isAdHocSigned='0', signingCertificate='<DVTSigningCertificate: 0x600001e7d380; name='Apple Development: Gregory Linford (XGV4H982AX)', hash='75EA596AB87130E42C8EC49DCDCA8469458315F6', serialNumber='148CC429E2C0F0690B09BCCED6AB40F3', certificateKinds='(
+    "1.2.840.113635.100.6.1.12",
+    "1.2.840.113635.100.6.1.2"
+), issueDate='2025-02-23 14:00:58 +0000''>', entitlements='{
+}', teamID='6645MJMX63', identifier='com.linfordsoftware.dnseasyswitcher', executablePath='<DVTFilePath:0x600004009180:'/Users/glinf/Library/Developer/Xcode/Archives/2025-02-25/DNS Easy Switcher 25-02-2025, 22.59.xcarchive/Products/Applications/DNS Easy Switcher.app/Contents/MacOS/DNS Easy Switcher'>', hardenedRuntime='1'>'> to: /var/folders/33/r3mtzdn102x40vpjzrzm9kyh0000gn/T/XcodeDistPipeline.~~~8zKmE7/entitlements~~~Eyl0xd
+2025-02-25 22:00:11 +0000  Running /usr/bin/codesign '-vvv' '--force' '--sign' '8FB842802AF0A81CD08194DB5E6CA6B5FB771823' '--entitlements' '/var/folders/33/r3mtzdn102x40vpjzrzm9kyh0000gn/T/XcodeDistPipeline.~~~8zKmE7/entitlements~~~Eyl0xd' '--generate-entitlement-der' '--preserve-metadata=identifier,flags,runtime' '--requirements' '=designated => anchor apple generic  and identifier "$self.identifier" and ((cert leaf[field.1.2.840.113635.100.6.1.9] exists) or ( certificate 1[field.1.2.840.113635.100.6.2.6] exists and certificate leaf[field.1.2.840.113635.100.6.1.13] exists  and certificate leaf[subject.OU] = "6645MJMX63" ))' '/var/folders/33/r3mtzdn102x40vpjzrzm9kyh0000gn/T/XcodeDistPipeline.~~~8zKmE7/Root/Applications/DNS Easy Switcher.app'
+2025-02-25 22:00:11 +0000  /var/folders/33/r3mtzdn102x40vpjzrzm9kyh0000gn/T/XcodeDistPipeline.~~~8zKmE7/Root/Applications/DNS Easy Switcher.app: replacing existing signature
+2025-02-25 22:00:23 +0000  /var/folders/33/r3mtzdn102x40vpjzrzm9kyh0000gn/T/XcodeDistPipeline.~~~8zKmE7/Root/Applications/DNS Easy Switcher.app: signed app bundle with Mach-O universal (x86_64 arm64) [com.linfordsoftware.dnseasyswitcher]
+2025-02-25 22:00:23 +0000  /usr/bin/codesign exited with 0
+2025-02-25 22:00:23 +0000  Processing step: IDEDistributionZipODRItemStep
+2025-02-25 22:00:23 +0000  Skipping step: IDEDistributionZipODRItemStep because it said so
+2025-02-25 22:00:23 +0000  Processing step: IDEDistributionSkipPackagingStep
+2025-02-25 22:00:23 +0000  Processing step: IDEDistributionAppStoreInformationStep
+2025-02-25 22:00:23 +0000  Skipping step: IDEDistributionAppStoreInformationStep because it said so
+2025-02-25 22:00:23 +0000  Processing step: IDEDistributionGenerateProcessedDistributionItems
+2025-02-25 22:00:23 +0000  IDEDistributionItem init <DVTFilePath:0x60000438c460:'/var/folders/33/r3mtzdn102x40vpjzrzm9kyh0000gn/T/XcodeDistPipeline.~~~8zKmE7/Root/Applications/DNS Easy Switcher.app'>
+2025-02-25 22:00:23 +0000  [OPTIONAL] Didn't find embedded provisioning profile for <DVTFilePath:0x60000438c460:'/var/folders/33/r3mtzdn102x40vpjzrzm9kyh0000gn/T/XcodeDistPipeline.~~~8zKmE7/Root/Applications/DNS Easy Switcher.app'>: Error Domain=NSCocoaErrorDomain Code=4 "No file at <DVTFilePath:0x6000047c8700:'/var/folders/33/r3mtzdn102x40vpjzrzm9kyh0000gn/T/XcodeDistPipeline.~~~8zKmE7/Root/Applications/DNS Easy Switcher.app/Contents/embedded.provisionprofile'>" UserInfo={NSLocalizedDescription=No file at <DVTFilePath:0x6000047c8700:'/var/folders/33/r3mtzdn102x40vpjzrzm9kyh0000gn/T/XcodeDistPipeline.~~~8zKmE7/Root/Applications/DNS Easy Switcher.app/Contents/embedded.provisionprofile'>}
+2025-02-25 22:00:23 +0000  Processing step: IDEDistributionCreateManifestStep
+2025-02-25 22:00:23 +0000  Skipping step: IDEDistributionCreateManifestStep because it said so
