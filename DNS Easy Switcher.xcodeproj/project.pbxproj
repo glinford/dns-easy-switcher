@@ -16,6 +16,8 @@
 		9165B67B2D6B62CC00DD9643 /* DNSManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9165B67A2D6B62CC00DD9643 /* DNSManager.swift */; };
 		9165B67D2D6B699A00DD9643 /* AddCustomDNSView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9165B67C2D6B699A00DD9643 /* AddCustomDNSView.swift */; };
 		9165B67F2D6B6D1800DD9643 /* CustomSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9165B67E2D6B6D1800DD9643 /* CustomSheet.swift */; };
+		91FFB82B2D6E6619008C0471 /* CustomDNSManagerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91FFB82A2D6E6619008C0471 /* CustomDNSManagerView.swift */; };
+		91FFB82D2D6E6639008C0471 /* EditCustomDNSView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91FFB82C2D6E6639008C0471 /* EditCustomDNSView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -30,6 +32,8 @@
 		9165B67A2D6B62CC00DD9643 /* DNSManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DNSManager.swift; sourceTree = "<group>"; };
 		9165B67C2D6B699A00DD9643 /* AddCustomDNSView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddCustomDNSView.swift; sourceTree = "<group>"; };
 		9165B67E2D6B6D1800DD9643 /* CustomSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomSheet.swift; sourceTree = "<group>"; };
+		91FFB82A2D6E6619008C0471 /* CustomDNSManagerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomDNSManagerView.swift; sourceTree = "<group>"; };
+		91FFB82C2D6E6639008C0471 /* EditCustomDNSView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditCustomDNSView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -72,6 +76,8 @@
 				9165B67A2D6B62CC00DD9643 /* DNSManager.swift */,
 				9165B67C2D6B699A00DD9643 /* AddCustomDNSView.swift */,
 				9165B67E2D6B6D1800DD9643 /* CustomSheet.swift */,
+				91FFB82A2D6E6619008C0471 /* CustomDNSManagerView.swift */,
+				91FFB82C2D6E6639008C0471 /* EditCustomDNSView.swift */,
 			);
 			path = "DNS Easy Switcher";
 			sourceTree = "<group>";
@@ -158,8 +164,10 @@
 				9165B67F2D6B6D1800DD9643 /* CustomSheet.swift in Sources */,
 				9165B67D2D6B699A00DD9643 /* AddCustomDNSView.swift in Sources */,
 				9165B66A2D6B616D00DD9643 /* MenuBarView.swift in Sources */,
+				91FFB82B2D6E6619008C0471 /* CustomDNSManagerView.swift in Sources */,
 				9165B66C2D6B616D00DD9643 /* DNSSettings.swift in Sources */,
 				9165B67B2D6B62CC00DD9643 /* DNSManager.swift in Sources */,
+				91FFB82D2D6E6639008C0471 /* EditCustomDNSView.swift in Sources */,
 				9165B6682D6B616D00DD9643 /* DNS_Easy_SwitcherApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

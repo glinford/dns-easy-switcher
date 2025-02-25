@@ -4,7 +4,6 @@
 //
 //  Created by Gregory LINFORD on 23/02/2025.
 //
-
 import SwiftUI
 import SwiftData
 
@@ -14,163 +13,273 @@ struct MenuBarView: View {
     @Query(sort: \CustomDNSServer.name) private var customServers: [CustomDNSServer]
     @State private var isUpdating = false
     @State private var showingAddDNS = false
+    @State private var showingManageDNS = false
+    @State private var selectedServer: CustomDNSServer?
     @State private var windowController: CustomSheetWindowController?
     
     var body: some View {
-         Group {
-             VStack {
-                 Toggle("AdGuard DNS", isOn: Binding(
-                     get: { dnsSettings.first?.isAdGuardEnabled ?? false },
-                     set: { newValue in
-                         if newValue && !isUpdating {
-                             activateDNS(type: .adguard)
-                         }
-                     }
-                   ))
-                   .padding(.horizontal)
-                   .disabled(isUpdating)
-                 
-                 Toggle("Cloudflare DNS", isOn: Binding(
-                     get: { dnsSettings.first?.isCloudflareEnabled ?? false },
-                     set: { newValue in
-                         if newValue && !isUpdating {
-                             activateDNS(type: .cloudflare)
-                         }
-                     }
-                 ))
-                 .padding(.horizontal)
-                 .disabled(isUpdating)
-                 
-                 Toggle("Quad9 DNS", isOn: Binding(
-                     get: { dnsSettings.first?.isQuad9Enabled ?? false },
-                     set: { newValue in
-                         if newValue && !isUpdating {
-                             activateDNS(type: .quad9)
-                         }
-                     }
-                 ))
-                 .padding(.horizontal)
-                 .disabled(isUpdating)
-                 
-                 Menu {
-                     ForEach(Array(DNSManager.shared.getflixServers.keys.sorted()), id: \.self) { location in
-                         Button(action: {
-                             activateDNS(type: .getflix(location))
-                         }) {
-                             HStack {
-                                 Text(location)
-                                 Spacer()
-                                 if dnsSettings.first?.activeGetFlixLocation == location {
-                                     Image(systemName: "checkmark")
-                                 }
-                             }
-                         }
-                     }
-                 } label: {
-                     HStack {
-                         Text("GetFlix DNS")
-                         Spacer()
-                         if let activeLocation = dnsSettings.first?.activeGetFlixLocation {
-                             Circle()
-                                 .fill(Color.green)
-                                 .frame(width: 8, height: 8)
-                         }
-                         Image(systemName: "chevron.down")
-                     }
-                 }
-                 .padding(.horizontal)
-                 .disabled(isUpdating)
-                 
-                 if !customServers.isEmpty {
-                     Divider()
-                     
-                     ForEach(customServers) { server in
-                         Toggle(server.name, isOn: Binding(
-                             get: { dnsSettings.first?.activeCustomDNSID == server.id },
-                             set: { newValue in
-                                 if newValue && !isUpdating {
-                                     activateDNS(type: .custom(server))
-                                 }
-                             }
-                         ))
-                         .padding(.horizontal)
-                         .disabled(isUpdating)
-                         
-                         Button("Remove") {
-                             modelContext.delete(server)
-                         }
-                         .buttonStyle(.borderless)
-                         .padding(.leading)
-                     }
-                 }
-                 
-                 Divider()
-                 
-                 Button(action: {
-                                 showAddCustomDNSSheet()
-                             }) {
-                                 Text("Add Custom DNS")
-                                     .frame(maxWidth: .infinity)
-                             }
-                             .buttonStyle(.bordered)
-                             .padding(.horizontal)
-                             .padding(.vertical, 5)
-                 
-                 Button("Disable DNS Override") {
-                     if !isUpdating {
-                         isUpdating = true
-                         DNSManager.shared.disableDNS { success in
-                             if success {
-                                 Task { @MainActor in
-                                     updateSettings(type: .none)
-                                 }
-                             }
-                             isUpdating = false
-                         }
-                     }
-                 }
-                 .padding(.vertical, 5)
-                 .disabled(isUpdating)
-                 
-                 Divider()
-                 
-                 Button("Quit") {
-                     NSApplication.shared.terminate(nil)
-                 }
-                 .padding(.vertical, 5)
-             }
-             .padding(.vertical, 5)
-         }
-         .onAppear {
-             ensureSettingsExist()
-         }
-     }
+        Group {
+            VStack {
+                Toggle("AdGuard DNS", isOn: Binding(
+                    get: { dnsSettings.first?.isAdGuardEnabled ?? false },
+                    set: { newValue in
+                        if newValue && !isUpdating {
+                            activateDNS(type: .adguard)
+                        }
+                    }
+                ))
+                .padding(.horizontal)
+                .disabled(isUpdating)
+                
+                Toggle("Cloudflare DNS", isOn: Binding(
+                    get: { dnsSettings.first?.isCloudflareEnabled ?? false },
+                    set: { newValue in
+                        if newValue && !isUpdating {
+                            activateDNS(type: .cloudflare)
+                        }
+                    }
+                ))
+                .padding(.horizontal)
+                .disabled(isUpdating)
+                
+                Toggle("Quad9 DNS", isOn: Binding(
+                    get: { dnsSettings.first?.isQuad9Enabled ?? false },
+                    set: { newValue in
+                        if newValue && !isUpdating {
+                            activateDNS(type: .quad9)
+                        }
+                    }
+                ))
+                .padding(.horizontal)
+                .disabled(isUpdating)
+                
+                Menu {
+                    ForEach(Array(DNSManager.shared.getflixServers.keys.sorted()), id: \.self) { location in
+                        Button(action: {
+                            activateDNS(type: .getflix(location))
+                        }) {
+                            HStack {
+                                Text(location)
+                                Spacer()
+                                if dnsSettings.first?.activeGetFlixLocation == location {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    HStack {
+                        Text("GetFlix DNS")
+                        Spacer()
+                        if let activeLocation = dnsSettings.first?.activeGetFlixLocation {
+                            Circle()
+                                .fill(Color.green)
+                                .frame(width: 8, height: 8)
+                        }
+                        Image(systemName: "chevron.down")
+                    }
+                }
+                .padding(.horizontal)
+                .disabled(isUpdating)
+                
+                Divider()
+                
+                // Custom DNS section
+                if !customServers.isEmpty {
+                    Menu {
+                        ForEach(customServers) { server in
+                            Button(action: {
+                                activateDNS(type: .custom(server))
+                            }) {
+                                HStack {
+                                    Text(server.name)
+                                    Spacer()
+                                    if dnsSettings.first?.activeCustomDNSID == server.id {
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
+                        }
+                    } label: {
+                        HStack {
+                            Text("Custom DNS")
+                            Spacer()
+                            if dnsSettings.first?.activeCustomDNSID != nil {
+                                Circle()
+                                    .fill(Color.green)
+                                    .frame(width: 8, height: 8)
+                            }
+                            Image(systemName: "chevron.down")
+                        }
+                    }
+                    .padding(.horizontal)
+                    .disabled(isUpdating)
+                    
+                    Button(action: {
+                        showManageCustomDNSSheet()
+                    }) {
+                        Text("Manage Custom DNS")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal)
+                    .padding(.vertical, 5)
+                }
+                
+                Button(action: {
+                    showAddCustomDNSSheet()
+                }) {
+                    Text("Add Custom DNS")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .padding(.horizontal)
+                .padding(.vertical, 5)
+                
+                Divider()
+                
+                Button("Disable DNS Override") {
+                    if !isUpdating {
+                        isUpdating = true
+                        DNSManager.shared.disableDNS { success in
+                            if success {
+                                Task { @MainActor in
+                                    updateSettings(type: .none)
+                                }
+                            }
+                            isUpdating = false
+                        }
+                    }
+                }
+                .padding(.vertical, 5)
+                .disabled(isUpdating)
+                
+                Divider()
+                
+                Button("Quit") {
+                    NSApplication.shared.terminate(nil)
+                }
+                .padding(.vertical, 5)
+            }
+            .padding(.vertical, 5)
+        }
+        .onAppear {
+            ensureSettingsExist()
+        }
+    }
     
     private func showAddCustomDNSSheet() {
-         let addView = AddCustomDNSView { newServer in
-             if let newServer = newServer {
-                 modelContext.insert(newServer)
-                 try? modelContext.save()
-             }
-             windowController?.close()
-             windowController = nil
-         }
-         
-         windowController = CustomSheetWindowController(view: addView, title: "Add Custom DNS")
-         windowController?.window?.level = .floating
-         windowController?.showWindow(nil)
-         
-         // Position the window relative to the menu bar
-         if let window = windowController?.window,
-            let screenFrame = NSScreen.main?.frame {
-             let windowFrame = window.frame
-             let newOrigin = NSPoint(
-                 x: screenFrame.width - windowFrame.width - 20,
-                 y: screenFrame.height - 40 - windowFrame.height
-             )
-             window.setFrameTopLeftPoint(newOrigin)
-         }
-     }
+        let addView = AddCustomDNSView { newServer in
+            if let newServer = newServer {
+                modelContext.insert(newServer)
+                try? modelContext.save()
+                // Automatically activate the new DNS
+                activateDNS(type: .custom(newServer))
+            }
+            windowController?.close()
+            windowController = nil
+        }
+        
+        windowController = CustomSheetWindowController(view: addView, title: "Add Custom DNS")
+        windowController?.window?.level = .floating
+        windowController?.showWindow(nil)
+        
+        // Position the window relative to the menu bar
+        if let window = windowController?.window,
+           let screenFrame = NSScreen.main?.frame {
+            let windowFrame = window.frame
+            let newOrigin = NSPoint(
+                x: screenFrame.width - windowFrame.width - 20,
+                y: screenFrame.height - 40 - windowFrame.height
+            )
+            window.setFrameTopLeftPoint(newOrigin)
+        }
+    }
+    
+    private func showManageCustomDNSSheet() {
+        let manageView = CustomDNSManagerView(customServers: customServers) { action, server in
+            switch action {
+            case .edit:
+                editCustomDNS(server)
+            case .delete:
+                modelContext.delete(server)
+                try? modelContext.save()
+                
+                // If this was the active server, disable DNS
+                if dnsSettings.first?.activeCustomDNSID == server.id {
+                    isUpdating = true
+                    DNSManager.shared.disableDNS { success in
+                        if success {
+                            Task { @MainActor in
+                                updateSettings(type: .none)
+                            }
+                        }
+                        isUpdating = false
+                    }
+                }
+            case .use:
+                activateDNS(type: .custom(server))
+            }
+            
+            // Don't close the window for .use or .edit actions
+            if action == .delete {
+                windowController?.close()
+                windowController = nil
+            }
+        }
+        
+        windowController = CustomSheetWindowController(view: manageView, title: "Manage Custom DNS")
+        windowController?.window?.level = .floating
+        windowController?.showWindow(nil)
+        
+        // Position the window relative to the menu bar
+        if let window = windowController?.window,
+           let screenFrame = NSScreen.main?.frame {
+            let windowFrame = window.frame
+            let newOrigin = NSPoint(
+                x: screenFrame.width - windowFrame.width - 20,
+                y: screenFrame.height - 40 - windowFrame.height
+            )
+            window.setFrameTopLeftPoint(newOrigin)
+        }
+    }
+    
+    private func editCustomDNS(_ server: CustomDNSServer) {
+        let editView = EditCustomDNSView(server: server) { updatedServer in
+            if let updatedServer = updatedServer {
+                // Update existing server properties
+                server.name = updatedServer.name
+                server.primaryDNS = updatedServer.primaryDNS
+                server.secondaryDNS = updatedServer.secondaryDNS
+                try? modelContext.save()
+                
+                // If this was the active server, update DNS settings
+                if dnsSettings.first?.activeCustomDNSID == server.id {
+                    activateDNS(type: .custom(server))
+                }
+            }
+            
+            windowController?.close()
+            windowController = nil
+        }
+        
+        windowController?.close()
+        
+        windowController = CustomSheetWindowController(view: editView, title: "Edit Custom DNS")
+        windowController?.window?.level = .floating
+        windowController?.showWindow(nil)
+        
+        // Position the window relative to the menu bar
+        if let window = windowController?.window,
+           let screenFrame = NSScreen.main?.frame {
+            let windowFrame = window.frame
+            let newOrigin = NSPoint(
+                x: screenFrame.width - windowFrame.width - 20,
+                y: screenFrame.height - 40 - windowFrame.height
+            )
+            window.setFrameTopLeftPoint(newOrigin)
+        }
+    }
     
     enum DNSType: Equatable {
         case none
@@ -193,7 +302,7 @@ struct MenuBarView: View {
             case (.custom(let lServer), .custom(let rServer)):
                 return lServer.id == rServer.id
             case (.getflix(let lLocation), .getflix(let rLocation)):
-                  return lLocation == rLocation
+                return lLocation == rLocation
             default:
                 return false
             }
@@ -285,15 +394,4 @@ struct MenuBarView: View {
             try? modelContext.save()
         }
     }
-    
-    private func updateSettings(cloudflare: Bool, quad9: Bool, adguard: Bool) {
-        if let settings = dnsSettings.first {
-            settings.isCloudflareEnabled = cloudflare
-            settings.isQuad9Enabled = quad9
-            settings.isAdGuardEnabled = adguard
-            settings.timestamp = Date()
-            try? modelContext.save()
-        }
-    }
-
 }
