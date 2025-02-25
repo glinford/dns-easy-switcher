@@ -8,6 +8,8 @@ A simple macOS menu bar app that allows you to quickly switch between different 
   - Cloudflare DNS (1.1.1.1)
   - Quad9 DNS (9.9.9.9)
   - AdGuard DNS (94.140.14.14)
+  - GetFlix DNS (with list of all locations)
+  - Disable DNS Overrides (DHCP-Provided DNS)
 - Add and manage your own custom DNS servers
 - Native macOS menu bar integration
 - Persists your settings between app launches
