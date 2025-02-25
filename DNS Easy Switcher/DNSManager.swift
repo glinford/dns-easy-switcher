@@ -7,6 +7,7 @@
 
 import Foundation
 import AppKit
+import LocalAuthentication
 
 class DNSManager {
     static let shared = DNSManager()
@@ -89,6 +90,106 @@ class DNSManager {
             ?? services.first
     }
     
+    private func executeWithAuthentication(command: String, completion: @escaping (Bool) -> Void) {
+            let context = LAContext()
+            context.localizedReason = "DNS Easy Switcher needs to modify network settings"
+            
+            var error: NSError?
+            if context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error) {
+                context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: "DNS Easy Switcher needs to modify network settings") { success, error in
+                    if success {
+                        DispatchQueue.global(qos: .userInitiated).async {
+                            let task = Process()
+                            task.launchPath = "/bin/bash"
+                            task.arguments = ["-c", command]
+                            
+                            let pipe = Pipe()
+                            task.standardOutput = pipe
+                            
+                            do {
+                                try task.run()
+                                task.waitUntilExit()
+                                
+                                let success = task.terminationStatus == 0
+                                DispatchQueue.main.async { completion(success) }
+                            } catch {
+                                print("Failed to execute command: \(error)")
+                                DispatchQueue.main.async { completion(false) }
+                            }
+                        }
+                    } else {
+                        print("Authentication failed: \(error?.localizedDescription ?? "Unknown error")")
+                        DispatchQueue.main.async { completion(false) }
+                    }
+                }
+            } else {
+                // Fall back to AppleScript for admin privileges
+                print("Local Authentication not available: \(error?.localizedDescription ?? "Unknown error")")
+                
+                DispatchQueue.global(qos: .userInitiated).async {
+                    let script = """
+                    do shell script "\(command)" with administrator privileges
+                    """
+                    
+                    var scriptError: NSDictionary?
+                    if let scriptObject = NSAppleScript(source: script) {
+                        if scriptObject.executeAndReturnError(&scriptError) != nil {
+                            DispatchQueue.main.async { completion(true) }
+                        } else {
+                            print("AppleScript error: \(scriptError ?? ["error": "Unknown error"] as NSDictionary)")
+                            DispatchQueue.main.async { completion(false) }
+                        }
+                    } else {
+                        DispatchQueue.main.async { completion(false) }
+                    }
+                }
+            }
+        }
+        
+        // Update your existing methods to use this new approach
+        func setPredefinedDNS(dnsServers: [String], completion: @escaping (Bool) -> Void) {
+            guard let service = findActiveService() else {
+                completion(false)
+                return
+            }
+            
+            let dnsArgs = dnsServers.joined(separator: " ")
+            let dnsCommand = "/usr/sbin/networksetup -setdnsservers '\(service)' \(dnsArgs)"
+            let ipv6Command = "/usr/sbin/networksetup -setv6off '\(service)'; /usr/sbin/networksetup -setv6automatic '\(service)'"
+            let fullCommand = "\(dnsCommand); \(ipv6Command)"
+            
+            executeWithAuthentication(command: fullCommand, completion: completion)
+        }
+        
+        func setCustomDNS(primary: String, secondary: String, completion: @escaping (Bool) -> Void) {
+            guard let service = findActiveService() else {
+                completion(false)
+                return
+            }
+            
+            var servers = [primary]
+            if !secondary.isEmpty {
+                servers.append(secondary)
+            }
+            
+            let dnsArgs = servers.joined(separator: " ")
+            let dnsCommand = "/usr/sbin/networksetup -setdnsservers '\(service)' \(dnsArgs)"
+            let ipv6Command = "/usr/sbin/networksetup -setv6off '\(service)'; /usr/sbin/networksetup -setv6automatic '\(service)'"
+            let fullCommand = "\(dnsCommand); \(ipv6Command)"
+            
+            executeWithAuthentication(command: fullCommand, completion: completion)
+        }
+        
+        func disableDNS(completion: @escaping (Bool) -> Void) {
+            guard let service = findActiveService() else {
+                completion(false)
+                return
+            }
+            
+            let command = "/usr/sbin/networksetup -setdnsservers '\(service)' empty"
+            executeWithAuthentication(command: command, completion: completion)
+        }
+    
     private func executePrivilegedCommand(arguments: [String]) -> Bool {
             guard let service = findActiveService() else { return false }
             
@@ -100,8 +201,7 @@ class DNSManager {
             
             // Combine IPv4 and IPv6 commands in a single script if we're setting DNS
             let isSettingDNS = arguments[0] == "-setdnsservers"
-            let isDisabling = arguments.contains("empty")
-            
+
             let commandScript: String
             if isSettingDNS {
                 // Combine DNS and IPv6 commands with semicolons in a single admin privilege request
@@ -125,49 +225,5 @@ class DNSManager {
                 }
             }
             return false
-    }
-    
-    func setPredefinedDNS(dnsServers: [String], completion: @escaping (Bool) -> Void) {
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            guard let self = self,
-                  let service = self.findActiveService() else {
-                DispatchQueue.main.async { completion(false) }
-                return
-            }
-            
-            let success = self.executePrivilegedCommand(arguments: ["-setdnsservers", service] + dnsServers)
-            DispatchQueue.main.async { completion(success) }
-        }
-    }
-    
-    func setCustomDNS(primary: String, secondary: String, completion: @escaping (Bool) -> Void) {
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            guard let self = self,
-                  let service = self.findActiveService() else {
-                DispatchQueue.main.async { completion(false) }
-                return
-            }
-            
-            var servers = [primary]
-            if !secondary.isEmpty {
-                servers.append(secondary)
-            }
-            
-            let success = self.executePrivilegedCommand(arguments: ["-setdnsservers", service] + servers)
-            DispatchQueue.main.async { completion(success) }
-        }
-    }
-    
-    func disableDNS(completion: @escaping (Bool) -> Void) {
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            guard let self = self,
-                  let service = self.findActiveService() else {
-                DispatchQueue.main.async { completion(false) }
-                return
-            }
-            
-            let success = self.executePrivilegedCommand(arguments: ["-setdnsservers", service, "empty"])
-            DispatchQueue.main.async { completion(success) }
-        }
     }
 }
