@@ -216,6 +216,25 @@ struct MenuBarView: View {
                 .padding(.vertical, 5)
                 .disabled(isUpdating || isSpeedTesting)
                 
+                Button(action: {
+                    clearDNSCache()
+                }) {
+                    HStack {
+                        Text("Clear DNS Cache")
+                        if isUpdating {
+                            Spacer()
+                            ProgressView()
+                                .scaleEffect(0.8)
+                                .frame(width: 16, height: 16)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .padding(.horizontal)
+                .padding(.vertical, 5)
+                .disabled(isUpdating || isSpeedTesting)
+                
                 Divider()
                 
                 Button("Quit") {
@@ -511,6 +530,17 @@ struct MenuBarView: View {
         if dnsSettings.isEmpty {
             modelContext.insert(DNSSettings())
             try? modelContext.save()
+        }
+    }
+    
+    private func clearDNSCache() {
+        if !isUpdating && !isSpeedTesting {
+            isUpdating = true
+            DNSManager.shared.clearDNSCache { success in
+                DispatchQueue.main.async {
+                    self.isUpdating = false
+                }
+            }
         }
     }
 }

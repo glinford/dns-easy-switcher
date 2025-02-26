@@ -226,4 +226,21 @@ class DNSManager {
             }
             return false
     }
+    
+    func clearDNSCache(completion: @escaping (Bool) -> Void) {
+        // First flush the DNS cache
+        let flushCommand = "dscacheutil -flushcache"
+        
+        executeWithAuthentication(command: flushCommand) { success in
+            if success {
+                let restartCommand = "killall -HUP mDNSResponder 2>/dev/null || killall -HUP mdnsresponder 2>/dev/null || true"
+                
+                self.executeWithAuthentication(command: restartCommand) { _ in
+                    completion(success)
+                }
+            } else {
+                completion(false)
+            }
+        }
+    }
 }
