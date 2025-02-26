@@ -112,7 +112,6 @@ struct MenuBarView: View {
                                 .frame(width: 12, height: 12)
                                 .padding(.trailing, 4)
                         }
-                        Image(systemName: "chevron.down")
                     }
                 }
                 .padding(.horizontal)
@@ -151,7 +150,6 @@ struct MenuBarView: View {
                                     .frame(width: 12, height: 12)
                                     .padding(.trailing, 4)
                             }
-                            Image(systemName: "chevron.down")
                         }
                     }
                     .padding(.horizontal)
