@@ -82,6 +82,26 @@ struct MenuBarView: View {
                     }
                 }
                 
+                // Google DNS
+                Toggle(getLabelWithPing("Google DNS", dnsType: .google), isOn: Binding(
+                    get: { dnsSettings.first?.isGoogleEnabled ?? false },
+                    set: { newValue in
+                        if newValue && !isUpdating {
+                            activateDNS(type: .google)
+                        }
+                    }
+                ))
+                .padding(.horizontal)
+                .disabled(isUpdating || isSpeedTesting)
+                .overlay(alignment: .trailing) {
+                    if isSpeedTesting {
+                        ProgressView()
+                            .scaleEffect(0.6)
+                            .frame(width: 12, height: 12)
+                            .padding(.trailing, 8)
+                    }
+                }
+                
                 // GetFlix DNS Menu
                 Menu {
                     ForEach(Array(DNSManager.shared.getflixServers.keys.sorted()), id: \.self) { location in
@@ -249,6 +269,10 @@ struct MenuBarView: View {
             if let result = pingResults.first(where: { $0.dnsName == "AdGuard" }) {
                 return "\(baseLabel) (\(Int(result.responseTime))ms)"
             }
+        case .google:
+            if let result = pingResults.first(where: { $0.dnsName == "Google" }) {
+                return "\(baseLabel) (\(Int(result.responseTime))ms)"
+            }
         default:
             break
         }
@@ -407,6 +431,7 @@ struct MenuBarView: View {
         case cloudflare
         case quad9
         case adguard
+        case google
         case custom(CustomDNSServer)
         case getflix(String)
         
@@ -419,6 +444,8 @@ struct MenuBarView: View {
             case (.quad9, .quad9):
                 return true
             case (.adguard, .adguard):
+                return true
+            case (.google, .google):
                 return true
             case (.custom(let lServer), .custom(let rServer)):
                 return lServer.id == rServer.id
@@ -461,6 +488,15 @@ struct MenuBarView: View {
                 }
                 isUpdating = false
             }
+        case .google:
+            DNSManager.shared.setPredefinedDNS(dnsServers: DNSManager.shared.googleServers) { success in
+                if success {
+                    Task { @MainActor in
+                        updateSettings(type: type)
+                    }
+                }
+                isUpdating = false
+            }
         case .custom(let server):
             DNSManager.shared.setCustomDNS(primary: server.primaryDNS, secondary: server.secondaryDNS) { success in
                 if success {
@@ -491,7 +527,8 @@ struct MenuBarView: View {
         if let settings = dnsSettings.first {
             settings.isCloudflareEnabled = (type == .cloudflare)
             settings.isQuad9Enabled = (type == .quad9)
-            settings.isAdGuardEnabled = type == .adguard ? true : nil
+            settings.isAdGuardEnabled = (type == .adguard)
+            settings.isGoogleEnabled = type == .google ? true : nil
             
             if case .getflix(let location) = type {
                 settings.activeGetFlixLocation = location

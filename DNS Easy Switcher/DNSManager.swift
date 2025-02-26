@@ -33,6 +33,13 @@ class DNSManager {
         "2a10:50c0::ad2:ff"   // IPv6 Secondary
     ]
     
+    let googleServers = [
+        "8.8.8.8",           // IPv4 Primary
+        "8.8.4.4",           // IPv4 Secondary
+        "2001:4860:4860::8888",  // IPv6 Primary
+        "2001:4860:4860::8844"   // IPv6 Secondary
+    ]
+    
     let getflixServers: [String: String] = [
         "Australia — Melbourne": "118.127.62.178",
         "Australia — Perth": "45.248.78.99",

@@ -51,7 +51,8 @@ class DNSSpeedTester {
         var allDNSToTest: [(String, String, Bool, String?)] = [
             ("Cloudflare", dnsManager.cloudflareServers[0], false, nil),
             ("Quad9", dnsManager.quad9Servers[0], false, nil),
-            ("AdGuard", dnsManager.adguardServers[0], false, nil)
+            ("AdGuard", dnsManager.adguardServers[0], false, nil),
+            ("Google", dnsManager.googleServers[0], false, nil)
         ]
         
         // Add all Getflix servers
