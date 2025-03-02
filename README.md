@@ -14,6 +14,7 @@ A simple macOS menu bar app that allows you to quickly switch between different 
 - Disable DNS Overrides (DHCP-Provided DNS)
 - Add and manage your own custom DNS servers
 - Test DNS speed to find the fastest provider
+- Flush DNS Cache
 - Touch ID authentication for DNS changes
 - Native macOS menu bar integration
 - Persists your settings between app launches
