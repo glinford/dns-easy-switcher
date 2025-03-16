@@ -28,11 +28,13 @@ struct EditCustomDNSView: View {
             TextField("Name (e.g. Work DNS)", text: $name)
                 .textFieldStyle(.roundedBorder)
             
-            TextField("Primary DNS (e.g. 8.8.8.8)", text: $primaryDNS)
+            TextField("Primary DNS (e.g. 8.8.8.8 or 127.0.0.1:5353)", text: $primaryDNS)
                 .textFieldStyle(.roundedBorder)
-            
+                .help("For custom ports, add colon and port number (e.g., 127.0.0.1:5353)")
+
             TextField("Secondary DNS (optional)", text: $secondaryDNS)
                 .textFieldStyle(.roundedBorder)
+                .help("For custom ports, add colon and port number (e.g., 127.0.0.1:5353)")
             
             HStack {
                 Button("Cancel") {

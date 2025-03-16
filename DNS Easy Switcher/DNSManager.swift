@@ -83,11 +83,12 @@ class DNSManager {
         return []
     }
     
-    private func findActiveService() -> String? {
+    private func findActiveServices() -> [String] {
         let services = getNetworkServices()
-        return services.first(where: { $0.lowercased().contains("wi-fi") })
-            ?? services.first(where: { $0.lowercased().contains("ethernet") })
-            ?? services.first
+        let activeServices = services.filter {
+            $0.lowercased().contains("wi-fi") || $0.lowercased().contains("ethernet")
+        }
+        return activeServices.isEmpty ? [services.first].compactMap { $0 } : activeServices
     }
     
     private func executeWithAuthentication(command: String, completion: @escaping (Bool) -> Void) {
@@ -145,31 +146,58 @@ class DNSManager {
                 }
             }
         }
+    
+    func setPredefinedDNS(dnsServers: [String], completion: @escaping (Bool) -> Void) {
+        let services = findActiveServices()
+        guard !services.isEmpty else {
+            completion(false)
+            return
+        }
         
-        // Update your existing methods to use this new approach
-        func setPredefinedDNS(dnsServers: [String], completion: @escaping (Bool) -> Void) {
-            guard let service = findActiveService() else {
-                completion(false)
-                return
-            }
+        let dispatchGroup = DispatchGroup()
+        var allSucceeded = true
+        
+        for service in services {
+            dispatchGroup.enter()
             
             let dnsArgs = dnsServers.joined(separator: " ")
             let dnsCommand = "/usr/sbin/networksetup -setdnsservers '\(service)' \(dnsArgs)"
             let ipv6Command = "/usr/sbin/networksetup -setv6off '\(service)'; /usr/sbin/networksetup -setv6automatic '\(service)'"
             let fullCommand = "\(dnsCommand); \(ipv6Command)"
             
-            executeWithAuthentication(command: fullCommand, completion: completion)
+            executeWithAuthentication(command: fullCommand) { success in
+                if !success {
+                    allSucceeded = false
+                }
+                dispatchGroup.leave()
+            }
         }
         
-        func setCustomDNS(primary: String, secondary: String, completion: @escaping (Bool) -> Void) {
-            guard let service = findActiveService() else {
-                completion(false)
-                return
-            }
+        dispatchGroup.notify(queue: .main) {
+            completion(allSucceeded)
+        }
+    }
+        
+    func setCustomDNS(primary: String, secondary: String, completion: @escaping (Bool) -> Void) {
+        let services = findActiveServices()
+        guard !services.isEmpty else {
+            completion(false)
+            return
+        }
+        
+        // Format DNS servers with port if specified
+        let formattedPrimary = formatDNSWithPort(primary)
+        let formattedSecondary = secondary.isEmpty ? "" : formatDNSWithPort(secondary)
+        
+        let dispatchGroup = DispatchGroup()
+        var allSucceeded = true
+        
+        for service in services {
+            dispatchGroup.enter()
             
-            var servers = [primary]
-            if !secondary.isEmpty {
-                servers.append(secondary)
+            var servers = [formattedPrimary]
+            if !formattedSecondary.isEmpty {
+                servers.append(formattedSecondary)
             }
             
             let dnsArgs = servers.joined(separator: " ")
@@ -177,22 +205,71 @@ class DNSManager {
             let ipv6Command = "/usr/sbin/networksetup -setv6off '\(service)'; /usr/sbin/networksetup -setv6automatic '\(service)'"
             let fullCommand = "\(dnsCommand); \(ipv6Command)"
             
-            executeWithAuthentication(command: fullCommand, completion: completion)
+            executeWithAuthentication(command: fullCommand) { success in
+                if !success {
+                    allSucceeded = false
+                }
+                dispatchGroup.leave()
+            }
         }
         
-        func disableDNS(completion: @escaping (Bool) -> Void) {
-            guard let service = findActiveService() else {
-                completion(false)
-                return
-            }
+        dispatchGroup.notify(queue: .main) {
+            completion(allSucceeded)
+        }
+    }
+
+    // Helper method to format DNS with port
+    private func formatDNSWithPort(_ dnsServer: String) -> String {
+        // If DNS server already includes a port (contains colon), return as is
+        if dnsServer.contains(":") {
+            return dnsServer
+        }
+        
+        // If it's an IPv6 address that needs a port, format properly with square brackets
+        if dnsServer.contains("::") || dnsServer.components(separatedBy: ":").count > 2 {
+            // IPv6 addresses with ports need to be formatted as [address]:port
+            return dnsServer
+        }
+        
+        // Regular IPv4 address without port, return as is
+        return dnsServer
+    }
+    
+    func disableDNS(completion: @escaping (Bool) -> Void) {
+        let services = findActiveServices()
+        guard !services.isEmpty else {
+            completion(false)
+            return
+        }
+        
+        let dispatchGroup = DispatchGroup()
+        var allSucceeded = true
+        
+        for service in services {
+            dispatchGroup.enter()
             
             let command = "/usr/sbin/networksetup -setdnsservers '\(service)' empty"
-            executeWithAuthentication(command: command, completion: completion)
+            
+            executeWithAuthentication(command: command) { success in
+                if !success {
+                    allSucceeded = false
+                }
+                dispatchGroup.leave()
+            }
         }
+        
+        dispatchGroup.notify(queue: .main) {
+            completion(allSucceeded)
+        }
+    }
     
     private func executePrivilegedCommand(arguments: [String]) -> Bool {
-            guard let service = findActiveService() else { return false }
-            
+        let services = findActiveServices()
+        guard !services.isEmpty else { return false }
+        
+        var success = true
+        
+        for service in services {
             // Properly escape the arguments for AppleScript
             let escapedArgs = arguments.map { arg in
                 return "\\\"" + arg.replacingOccurrences(of: "\\", with: "\\\\")
@@ -218,17 +295,21 @@ class DNSManager {
             
             var error: NSDictionary?
             if let scriptObject = NSAppleScript(source: commandScript) {
-                if scriptObject.executeAndReturnError(&error) != nil {
-                    return true
-                } else if let error = error {
-                    print("Error executing privileged command: \(error)")
+                if scriptObject.executeAndReturnError(&error) == nil {
+                    if let error = error {
+                        print("Error executing privileged command: \(error)")
+                        success = false
+                    }
                 }
+            } else {
+                success = false
             }
-            return false
+        }
+        
+        return success
     }
     
     func clearDNSCache(completion: @escaping (Bool) -> Void) {
-        // First flush the DNS cache
         let flushCommand = "dscacheutil -flushcache"
         
         executeWithAuthentication(command: flushCommand) { success in
