@@ -4,6 +4,8 @@ A simple macOS menu bar app that allows you to quickly switch between different 
 
 ![Screenshot of DNS Easy Switcher](screenshot.png)
 
+![downloads](https://img.shields.io/github/downloads/glinford/dns-easy-switcher/total)
+
 ## Features
 
 - Easy switching between popular DNS providers:
