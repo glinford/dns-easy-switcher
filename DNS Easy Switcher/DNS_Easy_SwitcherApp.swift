@@ -21,8 +21,24 @@ struct DNS_Easy_SwitcherApp: App {
                 DNSSettings.self,
                 CustomDNSServer.self
             ])
-            let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-            self.modelContainer = try ModelContainer(for: schema, configurations: [modelConfiguration])
+            let storeURL = try FileManager.default
+                .url(for: .applicationSupportDirectory,
+                     in: .userDomainMask,
+                     appropriateFor: nil,
+                     create: true)
+                .appendingPathComponent("DNS_Easy_Switcher", isDirectory: true)
+                .appendingPathComponent("DNSModel.sqlite")
+
+            try FileManager.default.createDirectory(
+                at: storeURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true)
+
+            let configuration = ModelConfiguration(
+                schema: schema,
+                url: storeURL,
+                isStoredInMemoryOnly: false)
+
+            self.modelContainer = try ModelContainer(for: schema, configurations: [configuration])
         } catch {
             fatalError("Could not create ModelContainer: \(error)")
         }

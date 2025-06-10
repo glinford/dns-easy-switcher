@@ -241,11 +241,19 @@ struct MenuBarView: View {
                     NSApplication.shared.terminate(nil)
                 }
                 .padding(.vertical, 5)
+
+                if let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
+                    Text("Version \(version)")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .padding(.bottom, 2)
+                }
             }
             .padding(.vertical, 5)
         }
         .onAppear {
             ensureSettingsExist()
+            applySavedDNS()
         }
     }
     
@@ -338,29 +346,32 @@ struct MenuBarView: View {
         let manageView = CustomDNSManagerView(customServers: customServers) { action, server in
             switch action {
             case .edit:
-                editCustomDNS(server)
+                if let server = server { editCustomDNS(server) }
             case .delete:
-                modelContext.delete(server)
-                try? modelContext.save()
-                
-                // If this was the active server, disable DNS
-                if dnsSettings.first?.activeCustomDNSID == server.id {
-                    isUpdating = true
-                    DNSManager.shared.disableDNS { success in
-                        if success {
-                            Task { @MainActor in
-                                updateSettings(type: .none)
+                if let server = server {
+                    modelContext.delete(server)
+                    try? modelContext.save()
+
+                    // If this was the active server, disable DNS
+                    if dnsSettings.first?.activeCustomDNSID == server.id {
+                        isUpdating = true
+                        DNSManager.shared.disableDNS { success in
+                            if success {
+                                Task { @MainActor in
+                                    updateSettings(type: .none)
+                                }
                             }
+                            isUpdating = false
                         }
-                        isUpdating = false
                     }
                 }
+                windowController?.close()
+                windowController = nil
             case .use:
-                activateDNS(type: .custom(server))
-            }
-            
-            // Don't close the window for .use or .edit actions
-            if action == .delete {
+                if let server = server {
+                    activateDNS(type: .custom(server))
+                }
+            case .close:
                 windowController?.close()
                 windowController = nil
             }
@@ -530,6 +541,28 @@ struct MenuBarView: View {
         if dnsSettings.isEmpty {
             modelContext.insert(DNSSettings())
             try? modelContext.save()
+        }
+    }
+
+    private func applySavedDNS() {
+        guard let settings = dnsSettings.first else { return }
+
+        if let customID = settings.activeCustomDNSID,
+           let server = customServers.first(where: { $0.id == customID }) {
+            activateDNS(type: .custom(server))
+            return
+        }
+
+        if settings.isCloudflareEnabled {
+            activateDNS(type: .cloudflare)
+        } else if settings.isQuad9Enabled {
+            activateDNS(type: .quad9)
+        } else if settings.isAdGuardEnabled ?? false {
+            activateDNS(type: .adguard)
+        } else if let location = settings.activeGetFlixLocation {
+            activateDNS(type: .getflix(location))
+        } else {
+            activateDNS(type: .none)
         }
     }
     
