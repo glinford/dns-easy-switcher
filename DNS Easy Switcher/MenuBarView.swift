@@ -335,7 +335,7 @@ struct MenuBarView: View {
     }
     
     private func showManageCustomDNSSheet() {
-        let manageView = CustomDNSManagerView(customServers: customServers) { action, server in
+        let manageView = CustomDNSManagerView(customServers: customServers, onAction: { action, server in
             switch action {
             case .edit:
                 editCustomDNS(server)
@@ -355,16 +355,18 @@ struct MenuBarView: View {
                         isUpdating = false
                     }
                 }
+                
+                // Close the window after deletion
+                windowController?.close()
+                windowController = nil
+                
             case .use:
                 activateDNS(type: .custom(server))
             }
-            
-            // Don't close the window for .use or .edit actions
-            if action == .delete {
-                windowController?.close()
-                windowController = nil
-            }
-        }
+        }, onClose: {
+            windowController?.close()
+            windowController = nil
+        })
         
         windowController = CustomSheetWindowController(view: manageView, title: "Manage Custom DNS")
         windowController?.window?.level = .floating
