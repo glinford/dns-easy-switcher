@@ -8,6 +8,12 @@
 import Foundation
 import SwiftData
 
+struct PredefinedDNSServer: Identifiable, Hashable, Codable {
+    var id: String
+    let name: String
+    let servers: [String]
+}
+
 @Model
 final class CustomDNSServer: Identifiable {
     var id: String
@@ -32,25 +38,14 @@ final class CustomDNSServer: Identifiable {
 @Model
 final class DNSSettings {
     @Attribute(.unique) var id: String
-    var isCloudflareEnabled: Bool
-    var isQuad9Enabled: Bool
-    var activeCustomDNSID: String?
+    var activeServerID: String?
     var timestamp: Date
-    var activeGetFlixLocation: String?
-    var isAdGuardEnabled: Bool?
     
     init(id: String = UUID().uuidString,
-         isCloudflareEnabled: Bool = false,
-         isQuad9Enabled: Bool = false,
-         activeCustomDNSID: String? = nil,
-         timestamp: Date = Date(),
-         isAdGuardEnabled: Bool? = false,
-         activeGetFlixLocation: String? = nil) {
+         activeServerID: String? = nil,
+         timestamp: Date = Date()) {
         self.id = id
-        self.isCloudflareEnabled = isCloudflareEnabled
-        self.isQuad9Enabled = isQuad9Enabled
-        self.activeCustomDNSID = activeCustomDNSID
+        self.activeServerID = activeServerID
         self.timestamp = timestamp
-        self.isAdGuardEnabled = isAdGuardEnabled
     }
 }

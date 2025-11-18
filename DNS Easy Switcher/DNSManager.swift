@@ -12,28 +12,28 @@ import LocalAuthentication
 class DNSManager {
     static let shared = DNSManager()
     
-    let cloudflareServers = [
-        "1.1.1.1",           // IPv4 Primary
-        "1.0.0.1",           // IPv4 Secondary
-        "2606:4700:4700::1111",  // IPv6 Primary
-        "2606:4700:4700::1001"   // IPv6 Secondary
+    static let predefinedServers: [PredefinedDNSServer] = [
+        PredefinedDNSServer(id: "cloudflare", name: "Cloudflare DNS", servers: [
+            "1.1.1.1",
+            "1.0.0.1",
+            "2606:4700:4700::1111",
+            "2606:4700:4700::1001"
+        ]),
+        PredefinedDNSServer(id: "quad9", name: "Quad9 DNS", servers: [
+            "9.9.9.9",
+            "149.112.112.112",
+            "2620:fe::fe",
+            "2620:fe::9"
+        ]),
+        PredefinedDNSServer(id: "adguard", name: "AdGuard DNS", servers: [
+            "94.140.14.14",
+            "94.140.15.15",
+            "2a10:50c0::ad1:ff",
+            "2a10:50c0::ad2:ff"
+        ])
     ]
     
-    let quad9Servers = [
-        "9.9.9.9",              // IPv4 Primary
-        "149.112.112.112",      // IPv4 Secondary
-        "2620:fe::fe",          // IPv6 Primary
-        "2620:fe::9"            // IPv6 Secondary
-    ]
-    
-    let adguardServers = [
-        "94.140.14.14",       // IPv4 Primary
-        "94.140.15.15",       // IPv4 Secondary
-        "2a10:50c0::ad1:ff",  // IPv6 Primary
-        "2a10:50c0::ad2:ff"   // IPv6 Secondary
-    ]
-    
-    let getflixServers: [String: String] = [
+    static let getflixServers: [PredefinedDNSServer] = [
         "Australia — Melbourne": "118.127.62.178",
         "Australia — Perth": "45.248.78.99",
         "Australia — Sydney 1": "54.252.183.4",
@@ -59,7 +59,8 @@ class DNSManager {
         "United States — Dallas (Central)": "169.55.51.86",
         "United States — Oregon (West)": "54.187.61.200",
         "United States — Virginia (East)": "54.164.176.2"
-    ]
+    ].map { PredefinedDNSServer(id: "getflix-\($0.key)", name: $0.key, servers: [$0.value]) }
+     .sorted { $0.name < $1.name }
     
     private func getNetworkServices() -> [String] {
         let task = Process()
