@@ -12,7 +12,7 @@ class CustomSheetWindowController: NSWindowController {
     convenience init(view: some View, title: String) {
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 300, height: 200),
-            styleMask: [.titled, .closable],
+            styleMask: [.titled, .closable, .resizable],
             backing: .buffered,
             defer: false
         )
