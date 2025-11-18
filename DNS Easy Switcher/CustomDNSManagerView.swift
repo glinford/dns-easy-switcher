@@ -14,6 +14,7 @@ enum CustomDNSAction {
 struct CustomDNSManagerView: View {
     let customServers: [CustomDNSServer]
     let onAction: (CustomDNSAction, CustomDNSServer) -> Void
+    let onClose: () -> Void
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -64,9 +65,7 @@ struct CustomDNSManagerView: View {
             HStack {
                 Spacer()
                 Button("Close") {
-                    if let server = customServers.first {
-                        onAction(.delete, server) // Using delete action to close window
-                    }
+                    onClose()
                 }
                 .keyboardShortcut(.escape)
             }
