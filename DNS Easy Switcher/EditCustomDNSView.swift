@@ -23,8 +23,8 @@ struct EditCustomDNSView: View {
         _name = State(initialValue: server.name)
         _primaryDNS = State(initialValue: server.primaryDNS)
         _secondaryDNS = State(initialValue: server.secondaryDNS)
-        _tertiaryDNS = State(initialValue: server.tertiaryDNS)
-        _quaternaryDNS = State(initialValue: server.quaternaryDNS)
+        _tertiaryDNS = State(initialValue: server.tertiaryDNS ?? "")
+        _quaternaryDNS = State(initialValue: server.quaternaryDNS ?? "")
     }
     
     var body: some View {

@@ -24,7 +24,17 @@ struct DNS_Easy_SwitcherApp: App {
             let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
             self.modelContainer = try ModelContainer(for: schema, configurations: [modelConfiguration])
         } catch {
-            fatalError("Could not create ModelContainer: \(error)")
+            // If the persistent store cannot be created (e.g., corrupted store or permission issue),
+            // fall back to an in-memory container so the app can still launch.
+            let schema = Schema([
+                DNSSettings.self,
+                CustomDNSServer.self
+            ])
+            self.modelContainer = try! ModelContainer(
+                for: schema,
+                configurations: [ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)]
+            )
+            print("Warning: Using in-memory store due to ModelContainer error: \(error)")
         }
     }
 

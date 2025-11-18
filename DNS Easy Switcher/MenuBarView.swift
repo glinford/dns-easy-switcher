@@ -411,6 +411,8 @@ struct MenuBarView: View {
                 server.name = updatedServer.name
                 server.primaryDNS = updatedServer.primaryDNS
                 server.secondaryDNS = updatedServer.secondaryDNS
+                server.tertiaryDNS = updatedServer.tertiaryDNS
+                server.quaternaryDNS = updatedServer.quaternaryDNS
                 try? modelContext.save()
                 
                 // If this was the active server, update DNS settings

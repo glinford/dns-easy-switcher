@@ -14,16 +14,16 @@ final class CustomDNSServer: Identifiable {
     var name: String
     var primaryDNS: String
     var secondaryDNS: String
-    var tertiaryDNS: String
-    var quaternaryDNS: String
+    var tertiaryDNS: String?
+    var quaternaryDNS: String?
     var timestamp: Date
     
     init(id: String = UUID().uuidString,
          name: String,
          primaryDNS: String,
          secondaryDNS: String,
-         tertiaryDNS: String = "",
-         quaternaryDNS: String = "",
+         tertiaryDNS: String? = nil,
+         quaternaryDNS: String? = nil,
          timestamp: Date = Date()) {
         self.id = id
         self.name = name
@@ -64,7 +64,7 @@ final class DNSSettings {
 extension CustomDNSServer {
     /// Returns all user-entered DNS entries, supporting comma-separated values per field.
     var dnsEntries: [String] {
-        [primaryDNS, secondaryDNS, tertiaryDNS, quaternaryDNS]
+        [primaryDNS, secondaryDNS, tertiaryDNS ?? "", quaternaryDNS ?? ""]
             .flatMap { entry in
                 entry
                     .split(separator: ",")
