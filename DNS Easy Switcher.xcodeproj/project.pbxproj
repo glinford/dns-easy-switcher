@@ -19,6 +19,7 @@
 		91FFB82B2D6E6619008C0471 /* CustomDNSManagerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91FFB82A2D6E6619008C0471 /* CustomDNSManagerView.swift */; };
 		91FFB82D2D6E6639008C0471 /* EditCustomDNSView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91FFB82C2D6E6639008C0471 /* EditCustomDNSView.swift */; };
 		91FFB82F2D6E6868008C0471 /* DNSSpeedTester.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91FFB82E2D6E6868008C0471 /* DNSSpeedTester.swift */; };
+		91FFB9002D70E000008C0471 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91FFB8FF2D70E000008C0471 /* AboutView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -36,6 +37,7 @@
 		91FFB82A2D6E6619008C0471 /* CustomDNSManagerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomDNSManagerView.swift; sourceTree = "<group>"; };
 		91FFB82C2D6E6639008C0471 /* EditCustomDNSView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditCustomDNSView.swift; sourceTree = "<group>"; };
 		91FFB82E2D6E6868008C0471 /* DNSSpeedTester.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DNSSpeedTester.swift; sourceTree = "<group>"; };
+		91FFB8FF2D70E000008C0471 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -81,6 +83,7 @@
 				91FFB82A2D6E6619008C0471 /* CustomDNSManagerView.swift */,
 				91FFB82C2D6E6639008C0471 /* EditCustomDNSView.swift */,
 				91FFB82E2D6E6868008C0471 /* DNSSpeedTester.swift */,
+				91FFB8FF2D70E000008C0471 /* AboutView.swift */,
 			);
 			path = "DNS Easy Switcher";
 			sourceTree = "<group>";
@@ -172,6 +175,7 @@
 				91FFB82F2D6E6868008C0471 /* DNSSpeedTester.swift in Sources */,
 				9165B67B2D6B62CC00DD9643 /* DNSManager.swift in Sources */,
 				91FFB82D2D6E6639008C0471 /* EditCustomDNSView.swift in Sources */,
+				91FFB9002D70E000008C0471 /* AboutView.swift in Sources */,
 				9165B6682D6B616D00DD9643 /* DNS_Easy_SwitcherApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

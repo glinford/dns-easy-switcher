@@ -16,6 +16,7 @@ struct MenuBarView: View {
     @State private var pingResults: [DNSSpeedTester.PingResult] = []
     @State private var showingAddDNS = false
     @State private var showingManageDNS = false
+    @State private var aboutWindowController: CustomSheetWindowController?
     @State private var selectedServer: CustomDNSServer?
     @State private var windowController: CustomSheetWindowController?
     
@@ -236,7 +237,12 @@ struct MenuBarView: View {
                 .disabled(isUpdating || isSpeedTesting)
                 
                 Divider()
-                
+
+                Button("About") {
+                    showAboutSheet()
+                }
+                .padding(.vertical, 5)
+
                 Button("Quit") {
                     NSApplication.shared.terminate(nil)
                 }
@@ -383,6 +389,19 @@ struct MenuBarView: View {
             )
             window.setFrameTopLeftPoint(newOrigin)
         }
+    }
+    
+    private func showAboutSheet() {
+        let aboutView = AboutView {
+            aboutWindowController?.close()
+            aboutWindowController = nil
+        }
+        
+        aboutWindowController?.close()
+        aboutWindowController = CustomSheetWindowController(view: aboutView, title: "About")
+        aboutWindowController?.window?.level = .floating
+        aboutWindowController?.showWindow(nil)
+        aboutWindowController?.window?.center()
     }
     
     private func editCustomDNS(_ server: CustomDNSServer) {
