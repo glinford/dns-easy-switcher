@@ -21,13 +21,43 @@ struct MenuBarView: View {
         settings.first?.activeServerID
     }
 
+    // Enum to differentiate server types for activation logic
+    enum DNSType {
+        case predefined(PredefinedDNSServer)
+        case custom(CustomDNSServer)
+    }
+
     var body: some View {
         Group {
             VStack {
+                // No DNS Override Button
+                Button(action: {
+                    if !isUpdating && !isSpeedTesting {
+                        isUpdating = true
+                        DNSManager.shared.disableDNS { success in
+                            if success {
+                                updateActiveServer(id: nil)
+                            }
+                            isUpdating = false
+                        }
+                    }
+                }) {
+                    HStack {
+                        Text("<No DNS Override>")
+                        Spacer()
+                        if false /*activeServerID == nil*/ { //TODO: disabled until we can reliably detect this
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal)
+                .disabled(isUpdating || isSpeedTesting)
+
                 // Predefined DNS Servers
                 ForEach(DNSManager.predefinedServers) { server in
                     Button(action: {
-                        activateDNS(id: server.id, servers: server.servers)
+                        activateDNS(type: .predefined(server))
                     }) {
                         HStack {
                             Text(getLabelWithPing(server.name, for: server.id))
@@ -46,7 +76,7 @@ struct MenuBarView: View {
                 Menu {
                     ForEach(DNSManager.getflixServers) { server in
                         Button(action: {
-                            activateDNS(id: server.id, servers: server.servers)
+                            activateDNS(type: .predefined(server))
                         }) {
                             HStack {
                                 Text(getLabelWithPing(server.name, for: server.id))
@@ -72,14 +102,12 @@ struct MenuBarView: View {
                 .padding(.horizontal)
                 .disabled(isUpdating || isSpeedTesting)
 
-                Divider()
-
-                // Custom DNS section
+                // Custom DNS menu
                 if !customServers.isEmpty {
                     Menu {
                         ForEach(customServers) { server in
                             Button(action: {
-                                activateDNS(id: server.id, servers: [server.primaryDNS, server.secondaryDNS].filter { !$0.isEmpty })
+                                activateDNS(type: .custom(server))
                             }) {
                                 HStack {
                                     Text(getLabelWithPing(server.name, for: server.id))
@@ -104,36 +132,22 @@ struct MenuBarView: View {
                     }
                     .padding(.horizontal)
                     .disabled(isUpdating || isSpeedTesting)
-
-                    Button(action: {
-                        showManageCustomDNSSheet()
-                    }) {
-                        Text("Manage Custom DNS")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.horizontal)
-                    .padding(.vertical, 5)
-                    .disabled(isSpeedTesting)
                 }
 
                 Divider()
 
-                Button("Disable DNS Override") {
-                    if !isUpdating && !isSpeedTesting {
-                        isUpdating = true
-                        DNSManager.shared.disableDNS { success in
-                            if success {
-                                updateActiveServer(id: nil)
-                            }
-                            isUpdating = false
-                        }
-                    }
+                // Tool Section
+                Button(action: {
+                    showManageCustomDNSSheet()
+                }) {
+                    Text("Manage Custom DNS")
+                        .frame(maxWidth: .infinity)
                 }
+                .buttonStyle(.plain)
+                .padding(.horizontal)
                 .padding(.vertical, 5)
-                .disabled(isUpdating || isSpeedTesting)
+                .disabled(isSpeedTesting)
 
-                // Speed Test Button
                 Button(action: {
                     runSpeedTest()
                 }) {
@@ -228,13 +242,26 @@ struct MenuBarView: View {
         }
     }
 
-    private func activateDNS(id: String, servers: [String]) {
+    private func activateDNS(type: DNSType) {
         isUpdating = true
-        DNSManager.shared.setPredefinedDNS(dnsServers: servers) { success in
+
+        let completion = { (success: Bool, id: String) in
             if success {
-                updateActiveServer(id: id)
+                self.updateActiveServer(id: id)
             }
-            isUpdating = false
+            self.isUpdating = false
+        }
+
+        switch type {
+        case .predefined(let server):
+            DNSManager.shared.setPredefinedDNS(dnsServers: server.servers) { success in
+                completion(success, server.id)
+            }
+        case .custom(let server):
+            let servers = [server.primaryDNS, server.secondaryDNS].filter { !$0.isEmpty }
+            DNSManager.shared.setCustomDNS(primary: server.primaryDNS, secondary: server.secondaryDNS) { success in
+                completion(success, server.id)
+            }
         }
     }
 
