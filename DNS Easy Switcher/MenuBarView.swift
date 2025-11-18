@@ -311,8 +311,6 @@ struct MenuBarView: View {
             if let newServer = newServer {
                 modelContext.insert(newServer)
                 try? modelContext.save()
-                // Automatically activate the new DNS
-                activateDNS(type: .custom(newServer))
             }
             windowController?.close()
             windowController = nil
