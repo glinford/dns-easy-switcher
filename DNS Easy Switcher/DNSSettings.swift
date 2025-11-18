@@ -14,17 +14,23 @@ final class CustomDNSServer: Identifiable {
     var name: String
     var primaryDNS: String
     var secondaryDNS: String
+    var tertiaryDNS: String
+    var quaternaryDNS: String
     var timestamp: Date
     
     init(id: String = UUID().uuidString,
          name: String,
          primaryDNS: String,
          secondaryDNS: String,
+         tertiaryDNS: String = "",
+         quaternaryDNS: String = "",
          timestamp: Date = Date()) {
         self.id = id
         self.name = name
         self.primaryDNS = primaryDNS
         self.secondaryDNS = secondaryDNS
+        self.tertiaryDNS = tertiaryDNS
+        self.quaternaryDNS = quaternaryDNS
         self.timestamp = timestamp
     }
 }
@@ -52,5 +58,18 @@ final class DNSSettings {
         self.activeCustomDNSID = activeCustomDNSID
         self.timestamp = timestamp
         self.isAdGuardEnabled = isAdGuardEnabled
+    }
+}
+
+extension CustomDNSServer {
+    /// Returns all user-entered DNS entries, supporting comma-separated values per field.
+    var dnsEntries: [String] {
+        [primaryDNS, secondaryDNS, tertiaryDNS, quaternaryDNS]
+            .flatMap { entry in
+                entry
+                    .split(separator: ",")
+                    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            }
+            .filter { !$0.isEmpty }
     }
 }

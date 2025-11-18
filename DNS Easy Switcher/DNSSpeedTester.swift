@@ -58,10 +58,12 @@ class DNSSpeedTester {
         let getflixServers = dnsManager.getflixServers.sorted(by: { $0.key < $1.key })
         allDNSToTest.append(contentsOf: getflixServers.map { ("Getflix: \($0.key)", $0.value, false, nil) })
         
-        // Add custom DNS servers
-        allDNSToTest.append(contentsOf: customServers.map {
-            ($0.name, $0.primaryDNS, true, $0.id)
-        })
+        // Add custom DNS servers (first entry only to keep test time reasonable)
+        for server in customServers {
+            if let firstEntry = server.dnsEntries.first {
+                allDNSToTest.append((server.name, firstEntry, true, server.id))
+            }
+        }
         
         // Use serial queue to avoid overwhelming the system
         let queue = DispatchQueue(label: "com.glinford.DNSSpeedTest", qos: .userInitiated)

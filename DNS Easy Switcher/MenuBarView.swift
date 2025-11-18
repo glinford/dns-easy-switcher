@@ -479,7 +479,7 @@ struct MenuBarView: View {
                 isUpdating = false
             }
         case .custom(let server):
-            DNSManager.shared.setCustomDNS(primary: server.primaryDNS, secondary: server.secondaryDNS) { success in
+            DNSManager.shared.setCustomDNS(servers: server.dnsEntries) { success in
                 if success {
                     Task { @MainActor in
                         updateSettings(type: type)
@@ -489,7 +489,7 @@ struct MenuBarView: View {
             }
         case .getflix(let location):
             if let dnsServer = DNSManager.shared.getflixServers[location] {
-                DNSManager.shared.setCustomDNS(primary: dnsServer, secondary: "") { success in
+                DNSManager.shared.setCustomDNS(servers: [dnsServer]) { success in
                     if success {
                         Task { @MainActor in
                             updateSettings(type: type)

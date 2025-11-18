@@ -178,31 +178,34 @@ class DNSManager {
         }
     }
         
-    func setCustomDNS(primary: String, secondary: String, completion: @escaping (Bool) -> Void) {
+    func setCustomDNS(servers rawServers: [String], completion: @escaping (Bool) -> Void) {
         let services = findActiveServices()
-        guard !services.isEmpty else {
+        // Allow comma-separated entries in any slot
+        let flattenedServers = rawServers
+            .flatMap { entry in
+                entry
+                    .split(separator: ",")
+                    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            }
+            .filter { !$0.isEmpty }
+        let parsedServers = flattenedServers.compactMap(parseDNSServer)
+        
+        guard !services.isEmpty, !parsedServers.isEmpty else {
             completion(false)
             return
         }
         
-        // Check if primary or secondary contains a port specification
-        let primaryHasPort = primary.contains(":")
-        let secondaryHasPort = !secondary.isEmpty && secondary.contains(":")
+        let hasCustomPorts = parsedServers.contains { $0.port != nil }
         
         // If no custom ports are specified, use the standard network setup method
-        if !primaryHasPort && !secondaryHasPort {
-            // Standard DNS servers without ports
-            var servers = [primary]
-            if !secondary.isEmpty {
-                servers.append(secondary)
-            }
-            
+        if !hasCustomPorts {
+            let servers = parsedServers.map { $0.address }
             setStandardDNS(services: services, servers: servers, completion: completion)
             return
         }
         
         // For DNS servers with custom ports, we need to modify the resolver configuration
-        let resolverContent = createResolverContent(primary, secondary)
+        let resolverContent = createResolverContent(parsedServers)
         
         // We'll use the existing executeWithAuthentication method which properly handles
         // authentication with Touch ID or admin password
@@ -233,40 +236,53 @@ class DNSManager {
                     }
                     
                     // Also set standard DNS servers to ensure proper resolution
-                    let standardServers = self.formatDNSWithoutPorts(primary, secondary)
+                    let standardServers = parsedServers.map { $0.address }
                     self.setStandardDNS(services: services, servers: standardServers, completion: completion)
                 }
             }
         }
     }
 
-    private func createResolverContent(_ primary: String, _ secondary: String) -> String {
+    private func createResolverContent(_ servers: [(address: String, port: Int?)]) -> String {
         var resolverContent = "# Custom DNS configuration with port\n"
         
-        // Add nameserver entries with port specification
-        if primary.contains(":") {
-            let components = primary.components(separatedBy: ":")
-            if components.count == 2, let port = Int(components[1]) {
-                resolverContent += "nameserver \(components[0])\n"
+        for server in servers {
+            resolverContent += "nameserver \(server.address)\n"
+            if let port = server.port {
                 resolverContent += "port \(port)\n"
-            }
-        } else {
-            resolverContent += "nameserver \(primary)\n"
-        }
-        
-        if !secondary.isEmpty {
-            if secondary.contains(":") {
-                let components = secondary.components(separatedBy: ":")
-                if components.count == 2, let port = Int(components[1]) {
-                    resolverContent += "nameserver \(components[0])\n"
-                    resolverContent += "port \(port)\n"
-                }
-            } else {
-                resolverContent += "nameserver \(secondary)\n"
             }
         }
         
         return resolverContent
+    }
+
+    private func parseDNSServer(_ input: String) -> (address: String, port: Int?)? {
+        let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        
+        // Support IPv6 with explicit port using bracket notation: [addr]:port
+        if trimmed.hasPrefix("["), let closingBracket = trimmed.firstIndex(of: "]") {
+            let address = String(trimmed[trimmed.index(after: trimmed.startIndex)..<closingBracket])
+            let remainder = trimmed[trimmed.index(after: closingBracket)..<trimmed.endIndex]
+            if remainder.hasPrefix(":") {
+                let portString = remainder.dropFirst()
+                if let port = Int(portString) {
+                    return (address, port)
+                }
+            }
+            return (address, nil)
+        }
+        
+        // IPv4 with port (single colon, numeric suffix)
+        let parts = trimmed.split(separator: ":", omittingEmptySubsequences: false)
+        if parts.count == 2,
+           let port = Int(parts[1]),
+           !parts[0].contains(":") {
+            return (String(parts[0]), port)
+        }
+        
+        // IPv6 or plain address with no port
+        return (trimmed, nil)
     }
 
     func disableDNS(completion: @escaping (Bool) -> Void) {
@@ -303,28 +319,6 @@ class DNSManager {
         }
     }
 
-    // Helper method to get DNS addresses without port specifications
-    private func formatDNSWithoutPorts(_ primary: String, _ secondary: String) -> [String] {
-        var servers: [String] = []
-        
-        // Extract IP address without port
-        if primary.contains(":") {
-            servers.append(primary.components(separatedBy: ":")[0])
-        } else {
-            servers.append(primary)
-        }
-        
-        if !secondary.isEmpty {
-            if secondary.contains(":") {
-                servers.append(secondary.components(separatedBy: ":")[0])
-            } else {
-                servers.append(secondary)
-            }
-        }
-        
-        return servers
-    }
-
     // Helper method to set standard DNS settings
     private func setStandardDNS(services: [String], servers: [String], completion: @escaping (Bool) -> Void) {
         let dispatchGroup = DispatchGroup()
@@ -351,23 +345,6 @@ class DNSManager {
         }
     }
 
-    // Helper method to format DNS with port
-    private func formatDNSWithPort(_ dnsServer: String) -> String {
-        // If DNS server already includes a port (contains colon), return as is
-        if dnsServer.contains(":") {
-            return dnsServer
-        }
-        
-        // If it's an IPv6 address that needs a port, format properly with square brackets
-        if dnsServer.contains("::") || dnsServer.components(separatedBy: ":").count > 2 {
-            // IPv6 addresses with ports need to be formatted as [address]:port
-            return dnsServer
-        }
-        
-        // Regular IPv4 address without port, return as is
-        return dnsServer
-    }
-    
     private func executePrivilegedCommand(arguments: [String]) -> Bool {
         let services = findActiveServices()
         guard !services.isEmpty else { return false }

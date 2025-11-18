@@ -12,6 +12,8 @@ struct AddCustomDNSView: View {
     @State private var name: String = ""
     @State private var primaryDNS: String = ""
     @State private var secondaryDNS: String = ""
+    @State private var tertiaryDNS: String = ""
+    @State private var quaternaryDNS: String = ""
     var onComplete: (CustomDNSServer?) -> Void
     
     var body: some View {
@@ -21,11 +23,19 @@ struct AddCustomDNSView: View {
             
             TextField("Primary DNS (e.g. 8.8.8.8 or 127.0.0.1:5353)", text: $primaryDNS)
                 .textFieldStyle(.roundedBorder)
-                .help("For custom ports, add colon and port number (e.g., 127.0.0.1:5353)")
+                .help("Use comma to add multiple addresses. For custom ports on IPv4, add colon and port number (e.g., 127.0.0.1:5353)")
 
             TextField("Secondary DNS (optional)", text: $secondaryDNS)
                 .textFieldStyle(.roundedBorder)
-                .help("For custom ports, add colon and port number (e.g., 127.0.0.1:5353)")
+                .help("Use comma to add multiple addresses. For custom ports on IPv4, add colon and port number (e.g., 127.0.0.1:5353)")
+            
+            TextField("Third DNS (IPv6 or IPv4, optional)", text: $tertiaryDNS)
+                .textFieldStyle(.roundedBorder)
+                .help("Tip: bracket IPv6 if adding a port, e.g., [2001:4860:4860::8888]:5353")
+            
+            TextField("Fourth DNS (IPv6 or IPv4, optional)", text: $quaternaryDNS)
+                .textFieldStyle(.roundedBorder)
+                .help("Use comma to add multiple IPv6 entries if needed")
             
             HStack {
                 Button("Cancel") {
@@ -40,7 +50,9 @@ struct AddCustomDNSView: View {
                     let server = CustomDNSServer(
                         name: name,
                         primaryDNS: primaryDNS,
-                        secondaryDNS: secondaryDNS
+                        secondaryDNS: secondaryDNS,
+                        tertiaryDNS: tertiaryDNS,
+                        quaternaryDNS: quaternaryDNS
                     )
                     onComplete(server)
                 }
@@ -49,6 +61,6 @@ struct AddCustomDNSView: View {
             }
         }
         .padding()
-        .frame(width: 300)
+        .frame(width: 360)
     }
 }

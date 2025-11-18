@@ -14,6 +14,8 @@ struct EditCustomDNSView: View {
     @State private var name: String
     @State private var primaryDNS: String
     @State private var secondaryDNS: String
+    @State private var tertiaryDNS: String
+    @State private var quaternaryDNS: String
     
     init(server: CustomDNSServer, onComplete: @escaping (CustomDNSServer?) -> Void) {
         self.server = server
@@ -21,6 +23,8 @@ struct EditCustomDNSView: View {
         _name = State(initialValue: server.name)
         _primaryDNS = State(initialValue: server.primaryDNS)
         _secondaryDNS = State(initialValue: server.secondaryDNS)
+        _tertiaryDNS = State(initialValue: server.tertiaryDNS)
+        _quaternaryDNS = State(initialValue: server.quaternaryDNS)
     }
     
     var body: some View {
@@ -30,11 +34,19 @@ struct EditCustomDNSView: View {
             
             TextField("Primary DNS (e.g. 8.8.8.8 or 127.0.0.1:5353)", text: $primaryDNS)
                 .textFieldStyle(.roundedBorder)
-                .help("For custom ports, add colon and port number (e.g., 127.0.0.1:5353)")
+                .help("Use comma to add multiple addresses. For custom ports on IPv4, add colon and port number (e.g., 127.0.0.1:5353)")
 
             TextField("Secondary DNS (optional)", text: $secondaryDNS)
                 .textFieldStyle(.roundedBorder)
-                .help("For custom ports, add colon and port number (e.g., 127.0.0.1:5353)")
+                .help("Use comma to add multiple addresses. For custom ports on IPv4, add colon and port number (e.g., 127.0.0.1:5353)")
+            
+            TextField("Third DNS (IPv6 or IPv4, optional)", text: $tertiaryDNS)
+                .textFieldStyle(.roundedBorder)
+                .help("Tip: bracket IPv6 if adding a port, e.g., [2001:4860:4860::8888]:5353")
+            
+            TextField("Fourth DNS (IPv6 or IPv4, optional)", text: $quaternaryDNS)
+                .textFieldStyle(.roundedBorder)
+                .help("Use comma to add multiple IPv6 entries if needed")
             
             HStack {
                 Button("Cancel") {
@@ -51,6 +63,8 @@ struct EditCustomDNSView: View {
                         name: name,
                         primaryDNS: primaryDNS,
                         secondaryDNS: secondaryDNS,
+                        tertiaryDNS: tertiaryDNS,
+                        quaternaryDNS: quaternaryDNS,
                         timestamp: server.timestamp
                     )
                     onComplete(updatedServer)
@@ -60,6 +74,6 @@ struct EditCustomDNSView: View {
             }
         }
         .padding()
-        .frame(width: 300)
+        .frame(width: 360)
     }
 }
