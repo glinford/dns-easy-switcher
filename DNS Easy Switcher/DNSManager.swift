@@ -126,29 +126,7 @@ class DNSManager {
             return
         }
 
-        let dispatchGroup = DispatchGroup()
-        var allSucceeded = true
-
-        for service in services {
-            dispatchGroup.enter()
-
-            let dnsArgs = dnsServers.joined(separator: " ")
-            let dnsCommand = "/usr/sbin/networksetup -setdnsservers '\(service)' \(dnsArgs)"
-            let ipv6Command = "/usr/sbin/networksetup -setv6off '\(service)'; /usr/sbin/networksetup -setv6automatic '\(service)'"
-            let fullCommand = "\(dnsCommand); \(ipv6Command)"
-            logger.info("Setting DNS \(dnsArgs, privacy: .public) for service \(service, privacy: .public)")
-
-            executeAdminScript(command: fullCommand) { success in
-                if !success {
-                        allSucceeded = false
-                    }
-                    dispatchGroup.leave()
-                }
-            }
-
-        dispatchGroup.notify(queue: .main) {
-            completion(allSucceeded)
-        }
+        setStandardDNS(services: services, servers: dnsServers, completion: completion)
     }
 
     func setCustomDNS(servers: [String], completion: @escaping (Bool) -> Void) {
@@ -292,10 +270,8 @@ class DNSManager {
 
             let dnsArgs = servers.joined(separator: " ")
             let dnsCommand = "/usr/sbin/networksetup -setdnsservers '\(service)' \(dnsArgs)"
-            let ipv6Command = "/usr/sbin/networksetup -setv6off '\(service)'; /usr/sbin/networksetup -setv6automatic '\(service)'"
-            let fullCommand = "\(dnsCommand); \(ipv6Command)"
 
-            executeAdminScript(command: fullCommand) { [self] success in
+            executeAdminScript(command: dnsCommand) { [self] success in
                 if !success {
                         allSucceeded = false
                         logger.error("DNS apply failed for service \(service, privacy: .public)")
@@ -327,52 +303,7 @@ class DNSManager {
         // Regular IPv4 address without port, return as is
         return dnsServer
     }
-
-    private func executePrivilegedCommand(arguments: [String]) -> Bool {
-        let services = findActiveServices()
-        guard !services.isEmpty else { return false }
-
-        var success = true
-
-        for service in services {
-            // Properly escape the arguments for AppleScript
-            let escapedArgs = arguments.map { arg in
-                return "\\\"" + arg.replacingOccurrences(of: "\\", with: "\\\\")
-                    .replacingOccurrences(of: "\"", with: "\\\"") + "\\\""
-            }.joined(separator: " ")
-
-            // Combine IPv4 and IPv6 commands in a single script if we're setting DNS
-            let isSettingDNS = arguments[0] == "-setdnsservers"
-
-            let commandScript: String
-            if isSettingDNS {
-                // Combine DNS and IPv6 commands with semicolons in a single admin privilege request
-                let ipv6Script = "/usr/sbin/networksetup -setv6off '\(service)'; /usr/sbin/networksetup -setv6automatic '\(service)'"
-                commandScript = """
-                do shell script "/usr/sbin/networksetup \(escapedArgs); \(ipv6Script)" with administrator privileges with prompt "DNS Easy Switcher needs to modify network settings"
-                """
-            } else {
-                // For other commands, keep as is
-                commandScript = """
-                do shell script "/usr/sbin/networksetup \(escapedArgs)" with administrator privileges with prompt "DNS Easy Switcher needs to modify network settings"
-                """
-            }
-
-            var error: NSDictionary?
-            if let scriptObject = NSAppleScript(source: commandScript) {
-                if scriptObject.executeAndReturnError(&error) == nil {
-                    if let error = error {
-                        logger.error("Error executing privileged command: \(String(describing: error), privacy: .public)")
-                        success = false
-                    }
-                }
-            } else {
-                success = false
-            }
-        }
-
-        return success
-    }
+    
 
     func clearDNSCache(completion: @escaping (Bool) -> Void) {
         let flushCommand = "dscacheutil -flushcache"
