@@ -46,7 +46,7 @@ class DNSSpeedTester {
         
         // Add custom DNS servers
         allDNSToTest.append(contentsOf: customServers.map {
-            (id: $0.id, name: $0.name, serverToPing: $0.primaryDNS)
+            (id: $0.id, name: $0.name, serverToPing: $0.servers.first ?? "")
         })
         
         // Filter out any servers with an empty address to ping

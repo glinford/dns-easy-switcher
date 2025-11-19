@@ -258,8 +258,7 @@ struct MenuBarView: View {
                 completion(success, server.id)
             }
         case .custom(let server):
-            let servers = [server.primaryDNS, server.secondaryDNS].filter { !$0.isEmpty }
-            DNSManager.shared.setCustomDNS(primary: server.primaryDNS, secondary: server.secondaryDNS) { success in
+            DNSManager.shared.setCustomDNS(servers: server.servers) { success in
                 completion(success, server.id)
             }
         }

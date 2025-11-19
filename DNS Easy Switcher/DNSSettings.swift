@@ -18,19 +18,16 @@ struct PredefinedDNSServer: Identifiable, Hashable, Codable {
 final class CustomDNSServer: Identifiable {
     var id: String
     var name: String
-    var primaryDNS: String
-    var secondaryDNS: String
+    var servers: [String]
     var timestamp: Date
     
     init(id: String = UUID().uuidString,
          name: String,
-         primaryDNS: String,
-         secondaryDNS: String,
+         servers: [String],
          timestamp: Date = Date()) {
         self.id = id
         self.name = name
-        self.primaryDNS = primaryDNS
-        self.secondaryDNS = secondaryDNS
+        self.servers = servers
         self.timestamp = timestamp
     }
 }

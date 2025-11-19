@@ -11,7 +11,7 @@ import LocalAuthentication
 
 class DNSManager {
     static let shared = DNSManager()
-    
+
     static let predefinedServers: [PredefinedDNSServer] = [
         PredefinedDNSServer(id: "cloudflare", name: "Cloudflare DNS", servers: [
             "1.1.1.1",
@@ -32,7 +32,7 @@ class DNSManager {
             "2a10:50c0::ad2:ff"
         ])
     ]
-    
+
     static let getflixServers: [PredefinedDNSServer] = [
         "Australia — Melbourne": "118.127.62.178",
         "Australia — Perth": "45.248.78.99",
@@ -61,15 +61,15 @@ class DNSManager {
         "United States — Virginia (East)": "54.164.176.2"
     ].map { PredefinedDNSServer(id: "getflix-\($0.key)", name: $0.key, servers: [$0.value]) }
      .sorted { $0.name < $1.name }
-    
+
     private func getNetworkServices() -> [String] {
         let task = Process()
         task.launchPath = "/usr/sbin/networksetup"
         task.arguments = ["-listallnetworkservices"]
-        
+
         let pipe = Pipe()
         task.standardOutput = pipe
-        
+
         do {
             try task.run()
             let data = pipe.fileHandleForReading.readDataToEndOfFile()
@@ -83,7 +83,7 @@ class DNSManager {
         }
         return []
     }
-    
+
     private func findActiveServices() -> [String] {
         let services = getNetworkServices()
         let activeServices = services.filter {
@@ -91,11 +91,11 @@ class DNSManager {
         }
         return activeServices.isEmpty ? [services.first].compactMap { $0 } : activeServices
     }
-    
+
     private func executeWithAuthentication(command: String, completion: @escaping (Bool) -> Void) {
             let context = LAContext()
             context.localizedReason = "DNS Easy Switcher needs to modify network settings"
-            
+
             var error: NSError?
             if context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error) {
                 context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: "DNS Easy Switcher needs to modify network settings") { success, error in
@@ -104,14 +104,14 @@ class DNSManager {
                             let task = Process()
                             task.launchPath = "/bin/bash"
                             task.arguments = ["-c", command]
-                            
+
                             let pipe = Pipe()
                             task.standardOutput = pipe
-                            
+
                             do {
                                 try task.run()
                                 task.waitUntilExit()
-                                
+
                                 let success = task.terminationStatus == 0
                                 DispatchQueue.main.async { completion(success) }
                             } catch {
@@ -127,103 +127,97 @@ class DNSManager {
             } else {
                 // Fall back to AppleScript for admin privileges
                 print("Local Authentication not available: \(error?.localizedDescription ?? "Unknown error")")
-                
+
                 DispatchQueue.global(qos: .userInitiated).async {
                     let script = """
                     do shell script "\(command)" with administrator privileges
                     """
-                    
+
                     var scriptError: NSDictionary?
                     if let scriptObject = NSAppleScript(source: script) {
-                        if scriptObject.executeAndReturnError(&scriptError) != nil {
-                            DispatchQueue.main.async { completion(true) }
-                        } else {
-                            print("AppleScript error: \(scriptError ?? ["error": "Unknown error"] as NSDictionary)")
-                            DispatchQueue.main.async { completion(false) }
-                        }
-                    } else {
+                                            var appleEventError: NSDictionary?
+                                            scriptObject.executeAndReturnError(&appleEventError)
+                                            if appleEventError == nil { // No AppleScript error means shell command succeeded
+                                                DispatchQueue.main.async { completion(true) }
+                                            } else {
+                                                print("AppleScript error: \(appleEventError ?? ["error": "Unknown error"] as NSDictionary)")
+                                                DispatchQueue.main.async { completion(false) }
+                                            }                    } else {
                         DispatchQueue.main.async { completion(false) }
                     }
                 }
             }
         }
-    
+
     func setPredefinedDNS(dnsServers: [String], completion: @escaping (Bool) -> Void) {
         let services = findActiveServices()
         guard !services.isEmpty else {
             completion(false)
             return
         }
-        
+
         let dispatchGroup = DispatchGroup()
         var allSucceeded = true
-        
+
         for service in services {
             dispatchGroup.enter()
-            
+
             let dnsArgs = dnsServers.joined(separator: " ")
             let dnsCommand = "/usr/sbin/networksetup -setdnsservers '\(service)' \(dnsArgs)"
             let ipv6Command = "/usr/sbin/networksetup -setv6off '\(service)'; /usr/sbin/networksetup -setv6automatic '\(service)'"
             let fullCommand = "\(dnsCommand); \(ipv6Command)"
-            
+
             executeWithAuthentication(command: fullCommand) { success in
                 if !success {
-                    allSucceeded = false
+                        allSucceeded = false
+                    }
+                    dispatchGroup.leave()
                 }
-                dispatchGroup.leave()
             }
-        }
-        
+
         dispatchGroup.notify(queue: .main) {
             completion(allSucceeded)
         }
     }
-        
-    func setCustomDNS(primary: String, secondary: String, completion: @escaping (Bool) -> Void) {
+
+    func setCustomDNS(servers: [String], completion: @escaping (Bool) -> Void) {
         let services = findActiveServices()
         guard !services.isEmpty else {
             completion(false)
             return
         }
-        
-        // Check if primary or secondary contains a port specification
-        let primaryHasPort = primary.contains(":")
-        let secondaryHasPort = !secondary.isEmpty && secondary.contains(":")
-        
+
+        // Check if any server contains a port specification
+        let hasPort = servers.contains { $0.contains(".") && $0.contains(":") }
+
         // If no custom ports are specified, use the standard network setup method
-        if !primaryHasPort && !secondaryHasPort {
-            // Standard DNS servers without ports
-            var servers = [primary]
-            if !secondary.isEmpty {
-                servers.append(secondary)
-            }
-            
+        if !hasPort {
             setStandardDNS(services: services, servers: servers, completion: completion)
             return
         }
-        
+
         // For DNS servers with custom ports, we need to modify the resolver configuration
-        let resolverContent = createResolverContent(primary, secondary)
-        
+        let resolverContent = createResolverContent(servers)
+
         // We'll use the existing executeWithAuthentication method which properly handles
         // authentication with Touch ID or admin password
         let createDirCmd = "sudo mkdir -p /etc/resolver"
         executeWithAuthentication(command: createDirCmd) { dirSuccess in
-            if !dirSuccess {
+            guard dirSuccess else {
                 print("Failed to create resolver directory")
                 completion(false)
                 return
             }
-            
+
             // Now write the resolver content
             let writeFileCmd = "echo '\(resolverContent)' | sudo tee /etc/resolver/custom > /dev/null"
             self.executeWithAuthentication(command: writeFileCmd) { fileSuccess in
-                if !fileSuccess {
+                guard fileSuccess else {
                     print("Failed to write resolver configuration")
                     completion(false)
                     return
                 }
-                
+
                 // Set permissions
                 let permCmd = "sudo chmod 644 /etc/resolver/custom"
                 self.executeWithAuthentication(command: permCmd) { permSuccess in
@@ -232,41 +226,30 @@ class DNSManager {
                         completion(false)
                         return
                     }
-                    
+
                     // Also set standard DNS servers to ensure proper resolution
-                    let standardServers = self.formatDNSWithoutPorts(primary, secondary)
+                    let standardServers = self.formatDNSWithoutPorts(servers)
                     self.setStandardDNS(services: services, servers: standardServers, completion: completion)
                 }
             }
         }
     }
 
-    private func createResolverContent(_ primary: String, _ secondary: String) -> String {
+    private func createResolverContent(_ servers: [String]) -> String {
         var resolverContent = "# Custom DNS configuration with port\n"
-        
-        // Add nameserver entries with port specification
-        if primary.contains(":") {
-            let components = primary.components(separatedBy: ":")
-            if components.count == 2, let port = Int(components[1]) {
-                resolverContent += "nameserver \(components[0])\n"
-                resolverContent += "port \(port)\n"
-            }
-        } else {
-            resolverContent += "nameserver \(primary)\n"
-        }
-        
-        if !secondary.isEmpty {
-            if secondary.contains(":") {
-                let components = secondary.components(separatedBy: ":")
+
+        for server in servers {
+            if server.contains(":") {
+                let components = server.components(separatedBy: ":")
                 if components.count == 2, let port = Int(components[1]) {
                     resolverContent += "nameserver \(components[0])\n"
                     resolverContent += "port \(port)\n"
                 }
             } else {
-                resolverContent += "nameserver \(secondary)\n"
+                resolverContent += "nameserver \(server)\n"
             }
         }
-        
+
         return resolverContent
     }
 
@@ -276,20 +259,20 @@ class DNSManager {
             completion(false)
             return
         }
-        
+
         // Remove any custom resolver configuration
         let removeResolverCmd = "sudo rm -f /etc/resolver/custom"
-        
+
         executeWithAuthentication(command: removeResolverCmd) { _ in
             // Continue with normal DNS reset regardless of resolver removal success
-            let dispatchGroup = DispatchGroup()
-            var allSucceeded = true
-            
-            for service in services {
-                dispatchGroup.enter()
-                
+        let dispatchGroup = DispatchGroup()
+        var allSucceeded = true
+
+        for service in services {
+            dispatchGroup.enter()
+
                 let command = "/usr/sbin/networksetup -setdnsservers '\(service)' empty"
-                
+
                 self.executeWithAuthentication(command: command) { success in
                     if !success {
                         allSucceeded = false
@@ -297,7 +280,7 @@ class DNSManager {
                     dispatchGroup.leave()
                 }
             }
-            
+
             dispatchGroup.notify(queue: .main) {
                 completion(allSucceeded)
             }
@@ -305,48 +288,42 @@ class DNSManager {
     }
 
     // Helper method to get DNS addresses without port specifications
-    private func formatDNSWithoutPorts(_ primary: String, _ secondary: String) -> [String] {
-        var servers: [String] = []
-        
-        // Extract IP address without port
-        if primary.contains(":") {
-            servers.append(primary.components(separatedBy: ":")[0])
-        } else {
-            servers.append(primary)
-        }
-        
-        if !secondary.isEmpty {
-            if secondary.contains(":") {
-                servers.append(secondary.components(separatedBy: ":")[0])
+    private func formatDNSWithoutPorts(_ servers: [String]) -> [String] {
+        var serversWithoutPort: [String] = []
+
+        for server in servers {
+            // Extract IP address without port
+            if server.contains(":") {
+                serversWithoutPort.append(server.components(separatedBy: ":")[0])
             } else {
-                servers.append(secondary)
+                serversWithoutPort.append(server)
             }
         }
-        
-        return servers
+
+        return serversWithoutPort
     }
 
     // Helper method to set standard DNS settings
     private func setStandardDNS(services: [String], servers: [String], completion: @escaping (Bool) -> Void) {
         let dispatchGroup = DispatchGroup()
         var allSucceeded = true
-        
+
         for service in services {
             dispatchGroup.enter()
-            
+
             let dnsArgs = servers.joined(separator: " ")
             let dnsCommand = "/usr/sbin/networksetup -setdnsservers '\(service)' \(dnsArgs)"
             let ipv6Command = "/usr/sbin/networksetup -setv6off '\(service)'; /usr/sbin/networksetup -setv6automatic '\(service)'"
             let fullCommand = "\(dnsCommand); \(ipv6Command)"
-            
+
             executeWithAuthentication(command: fullCommand) { success in
                 if !success {
-                    allSucceeded = false
-                }
-                dispatchGroup.leave()
+                        allSucceeded = false
+                    }
+                    dispatchGroup.leave()
             }
         }
-        
+
         dispatchGroup.notify(queue: .main) {
             completion(allSucceeded)
         }
@@ -358,30 +335,30 @@ class DNSManager {
         if dnsServer.contains(":") {
             return dnsServer
         }
-        
+
         // If it's an IPv6 address that needs a port, format properly with square brackets
         if dnsServer.contains("::") || dnsServer.components(separatedBy: ":").count > 2 {
             // IPv6 addresses with ports need to be formatted as [address]:port
             return dnsServer
         }
-        
+
         // Regular IPv4 address without port, return as is
         return dnsServer
     }
-    
+
     private func executePrivilegedCommand(arguments: [String]) -> Bool {
         let services = findActiveServices()
         guard !services.isEmpty else { return false }
-        
+
         var success = true
-        
+
         for service in services {
             // Properly escape the arguments for AppleScript
             let escapedArgs = arguments.map { arg in
                 return "\\\"" + arg.replacingOccurrences(of: "\\", with: "\\\\")
                     .replacingOccurrences(of: "\"", with: "\\\"") + "\\\""
             }.joined(separator: " ")
-            
+
             // Combine IPv4 and IPv6 commands in a single script if we're setting DNS
             let isSettingDNS = arguments[0] == "-setdnsservers"
 
@@ -398,7 +375,7 @@ class DNSManager {
                 do shell script "/usr/sbin/networksetup \(escapedArgs)" with administrator privileges with prompt "DNS Easy Switcher needs to modify network settings"
                 """
             }
-            
+
             var error: NSDictionary?
             if let scriptObject = NSAppleScript(source: commandScript) {
                 if scriptObject.executeAndReturnError(&error) == nil {
@@ -411,17 +388,17 @@ class DNSManager {
                 success = false
             }
         }
-        
+
         return success
     }
-    
+
     func clearDNSCache(completion: @escaping (Bool) -> Void) {
         let flushCommand = "dscacheutil -flushcache"
-        
+
         executeWithAuthentication(command: flushCommand) { success in
             if success {
                 let restartCommand = "killall -HUP mDNSResponder 2>/dev/null || killall -HUP mdnsresponder 2>/dev/null || true"
-                
+
                 self.executeWithAuthentication(command: restartCommand) { _ in
                     completion(success)
                 }

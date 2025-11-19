@@ -38,7 +38,7 @@ struct CustomDNSManagerView: View {
                         HStack {
                             VStack(alignment: .leading) {
                                 Text(server.name).fontWeight(.bold)
-                                Text("\(server.primaryDNS)" + (server.secondaryDNS.isEmpty ? "" : ", \(server.secondaryDNS)"))
+                                Text(server.servers.joined(separator: ", "))
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
@@ -103,8 +103,7 @@ struct CustomDNSManagerView: View {
             EditCustomDNSView(server: server) { updatedServer in
                 if let updatedServer = updatedServer {
                     server.name = updatedServer.name
-                    server.primaryDNS = updatedServer.primaryDNS
-                    server.secondaryDNS = updatedServer.secondaryDNS
+                    server.servers = updatedServer.servers
                     try? modelContext.save()
                 }
                 serverToEdit = nil
