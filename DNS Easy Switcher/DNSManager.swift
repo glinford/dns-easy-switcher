@@ -96,62 +96,28 @@ class DNSManager {
         return chosen
     }
 
-    private func executeWithAuthentication(command: String, completion: @escaping (Bool) -> Void) {
-            let context = LAContext()
-            context.localizedReason = "DNS Easy Switcher needs to modify network settings"
 
-            var error: NSError?
-            if context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error) {
-                context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: "DNS Easy Switcher needs to modify network settings") { [self] success, error in
-                    if success {
-                        DispatchQueue.global(qos: .userInitiated).async {
-                            let task = Process()
-                            task.launchPath = "/bin/bash"
-                            task.arguments = ["-c", command]
+    // Execute a shell command with administrator privileges using AppleScript
+    private func executeAdminScript(command: String, completion: @escaping (Bool) -> Void) {
+        DispatchQueue.global(qos: .userInitiated).async {
+            let script = """
+            do shell script "\(command)" with administrator privileges with prompt "DNS Easy Switcher needs to modify network settings"
+            """
 
-                            let pipe = Pipe()
-                            task.standardOutput = pipe
-
-                            do {
-                                try task.run()
-                                task.waitUntilExit()
-
-                                let success = task.terminationStatus == 0
-                                DispatchQueue.main.async { completion(success) }
-                            } catch {
-                                logger.error("Failed to execute command: \(String(describing: error), privacy: .public)")
-                                DispatchQueue.main.async { completion(false) }
-                            }
-                        }
-                    } else {
-                        logger.error("Authentication failed: \(error?.localizedDescription ?? "Unknown error", privacy: .public)")
-                        DispatchQueue.main.async { completion(false) }
-                    }
+            var errorDict: NSDictionary?
+            if let scriptObject = NSAppleScript(source: script) {
+                scriptObject.executeAndReturnError(&errorDict)
+                if errorDict == nil {
+                    DispatchQueue.main.async { completion(true) }
+                } else {
+                    self.logger.error("AppleScript error: \(String(describing: errorDict), privacy: .public)")
+                    DispatchQueue.main.async { completion(false) }
                 }
             } else {
-                // Fall back to AppleScript for admin privileges
-                logger.error("Local Authentication not available: \(error?.localizedDescription ?? "Unknown error", privacy: .public)")
-
-                DispatchQueue.global(qos: .userInitiated).async {
-                    let script = """
-                    do shell script "\(command)" with administrator privileges
-                    """
-
-                    var scriptError: NSDictionary?
-                    if let scriptObject = NSAppleScript(source: script) {
-                                            var appleEventError: NSDictionary?
-                                            scriptObject.executeAndReturnError(&appleEventError)
-                                            if appleEventError == nil { // No AppleScript error means shell command succeeded
-                                                DispatchQueue.main.async { completion(true) }
-                                            } else {
-                                                self.logger.error("AppleScript error: \(appleEventError ?? ["error": "Unknown error"] as NSDictionary, privacy: .public)")
-                                                DispatchQueue.main.async { completion(false) }
-                                            }                    } else {
-                        DispatchQueue.main.async { completion(false) }
-                    }
-                }
+                DispatchQueue.main.async { completion(false) }
             }
         }
+    }
 
     func setPredefinedDNS(dnsServers: [String], completion: @escaping (Bool) -> Void) {
         let services = findActiveServices()
@@ -172,7 +138,7 @@ class DNSManager {
             let fullCommand = "\(dnsCommand); \(ipv6Command)"
             logger.info("Setting DNS \(dnsArgs, privacy: .public) for service \(service, privacy: .public)")
 
-            executeWithAuthentication(command: fullCommand) { success in
+            executeAdminScript(command: fullCommand) { success in
                 if !success {
                         allSucceeded = false
                     }
@@ -206,8 +172,8 @@ class DNSManager {
 
         // We'll use the existing executeWithAuthentication method which properly handles
         // authentication with Touch ID or admin password
-        let createDirCmd = "sudo mkdir -p /etc/resolver"
-        executeWithAuthentication(command: createDirCmd) { [self] dirSuccess in
+        let createDirCmd = "/bin/mkdir -p /etc/resolver"
+        executeAdminScript(command: createDirCmd) { [self] dirSuccess in
             guard dirSuccess else {
                 logger.error("Failed to create resolver directory")
                 completion(false)
@@ -215,8 +181,12 @@ class DNSManager {
             }
 
             // Now write the resolver content
-            let writeFileCmd = "echo '\(resolverContent)' | sudo tee /etc/resolver/custom > /dev/null"
-            self.executeWithAuthentication(command: writeFileCmd) { fileSuccess in
+            let writeFileCmd = """
+            /usr/bin/tee /etc/resolver/custom > /dev/null <<'EOF'
+            \(resolverContent)
+            EOF
+            """
+            self.executeAdminScript(command: writeFileCmd) { fileSuccess in
                 guard fileSuccess else {
                     logger.error("Failed to write resolver configuration")
                     completion(false)
@@ -224,8 +194,8 @@ class DNSManager {
                 }
 
                 // Set permissions
-                let permCmd = "sudo chmod 644 /etc/resolver/custom"
-                self.executeWithAuthentication(command: permCmd) { permSuccess in
+                let permCmd = "/bin/chmod 644 /etc/resolver/custom"
+                self.executeAdminScript(command: permCmd) { permSuccess in
                     if !permSuccess {
                         logger.error("Failed to set resolver file permissions")
                         completion(false)
@@ -266,9 +236,9 @@ class DNSManager {
         }
 
         // Remove any custom resolver configuration
-        let removeResolverCmd = "sudo rm -f /etc/resolver/custom"
+        let removeResolverCmd = "/bin/rm -f /etc/resolver/custom"
 
-        executeWithAuthentication(command: removeResolverCmd) { [self] _ in
+        executeAdminScript(command: removeResolverCmd) { [self] _ in
             // Continue with normal DNS reset regardless of resolver removal success
         let dispatchGroup = DispatchGroup()
         var allSucceeded = true
@@ -279,7 +249,7 @@ class DNSManager {
                 let command = "/usr/sbin/networksetup -setdnsservers '\(service)' empty"
                 logger.info("Resetting DNS for service \(service, privacy: .public)")
 
-                self.executeWithAuthentication(command: command) { success in
+                self.executeAdminScript(command: command) { success in
                     if !success {
                         allSucceeded = false
                         logger.error("DNS reset failed for service \(service, privacy: .public)")
@@ -325,7 +295,7 @@ class DNSManager {
             let ipv6Command = "/usr/sbin/networksetup -setv6off '\(service)'; /usr/sbin/networksetup -setv6automatic '\(service)'"
             let fullCommand = "\(dnsCommand); \(ipv6Command)"
 
-            executeWithAuthentication(command: fullCommand) { [self] success in
+            executeAdminScript(command: fullCommand) { [self] success in
                 if !success {
                         allSucceeded = false
                         logger.error("DNS apply failed for service \(service, privacy: .public)")
@@ -408,11 +378,11 @@ class DNSManager {
         let flushCommand = "dscacheutil -flushcache"
         logger.info("Flushing DNS cache")
 
-        executeWithAuthentication(command: flushCommand) { success in
+        executeAdminScript(command: flushCommand) { success in
             if success {
                 let restartCommand = "killall -HUP mDNSResponder 2>/dev/null || killall -HUP mdnsresponder 2>/dev/null || true"
 
-                self.executeWithAuthentication(command: restartCommand) { _ in
+                self.executeAdminScript(command: restartCommand) { _ in
                     self.logger.info("DNS cache flushed and mDNSResponder restarted")
                     completion(success)
                 }
