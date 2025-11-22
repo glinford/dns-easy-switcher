@@ -7,33 +7,35 @@
 
 import Foundation
 import AppKit
+import os
 import LocalAuthentication
 
 class DNSManager {
     static let shared = DNSManager()
-    
-    let cloudflareServers = [
-        "1.1.1.1",           // IPv4 Primary
-        "1.0.0.1",           // IPv4 Secondary
-        "2606:4700:4700::1111",  // IPv6 Primary
-        "2606:4700:4700::1001"   // IPv6 Secondary
+    private let logger = Logger(subsystem: "com.linfordsoftware.dnseasyswitcher", category: "DNSManager")
+
+    static let predefinedServers: [PredefinedDNSServer] = [
+        PredefinedDNSServer(id: "cloudflare", name: "Cloudflare DNS", servers: [
+            "1.1.1.1",
+            "1.0.0.1",
+            "2606:4700:4700::1111",
+            "2606:4700:4700::1001"
+        ]),
+        PredefinedDNSServer(id: "quad9", name: "Quad9 DNS", servers: [
+            "9.9.9.9",
+            "149.112.112.112",
+            "2620:fe::fe",
+            "2620:fe::9"
+        ]),
+        PredefinedDNSServer(id: "adguard", name: "AdGuard DNS", servers: [
+            "94.140.14.14",
+            "94.140.15.15",
+            "2a10:50c0::ad1:ff",
+            "2a10:50c0::ad2:ff"
+        ])
     ]
-    
-    let quad9Servers = [
-        "9.9.9.9",              // IPv4 Primary
-        "149.112.112.112",      // IPv4 Secondary
-        "2620:fe::fe",          // IPv6 Primary
-        "2620:fe::9"            // IPv6 Secondary
-    ]
-    
-    let adguardServers = [
-        "94.140.14.14",       // IPv4 Primary
-        "94.140.15.15",       // IPv4 Secondary
-        "2a10:50c0::ad1:ff",  // IPv6 Primary
-        "2a10:50c0::ad2:ff"   // IPv6 Secondary
-    ]
-    
-    let getflixServers: [String: String] = [
+
+    static let getflixServers: [PredefinedDNSServer] = [
         "Australia — Melbourne": "118.127.62.178",
         "Australia — Perth": "45.248.78.99",
         "Australia — Sydney 1": "54.252.183.4",
@@ -59,16 +61,17 @@ class DNSManager {
         "United States — Dallas (Central)": "169.55.51.86",
         "United States — Oregon (West)": "54.187.61.200",
         "United States — Virginia (East)": "54.164.176.2"
-    ]
-    
+    ].map { PredefinedDNSServer(id: "getflix-\($0.key)", name: $0.key, servers: [$0.value]) }
+     .sorted { $0.name < $1.name }
+
     private func getNetworkServices() -> [String] {
         let task = Process()
         task.launchPath = "/usr/sbin/networksetup"
         task.arguments = ["-listallnetworkservices"]
-        
+
         let pipe = Pipe()
         task.standardOutput = pipe
-        
+
         do {
             try task.run()
             let data = pipe.fileHandleForReading.readDataToEndOfFile()
@@ -78,211 +81,223 @@ class DNSManager {
                     .filter { !$0.isEmpty && !$0.hasPrefix("*") } // Remove empty lines and disabled services
             }
         } catch {
-            print("Error getting network services: \(error)")
+            logger.error("Error getting network services: \(String(describing: error), privacy: .public)")
         }
         return []
     }
-    
+
     private func findActiveServices() -> [String] {
         let services = getNetworkServices()
-        let activeServices = services.filter {
-            $0.lowercased().contains("wi-fi") || $0.lowercased().contains("ethernet")
+        let deviceMap = getServiceDeviceMap()
+
+        var active: [String] = []
+        for service in services {
+            if serviceHasIPv4(service) {
+                active.append(service)
+                continue
+            }
+
+            if let device = deviceMap[service], isDeviceActive(device) {
+                active.append(service)
+            }
         }
-        return activeServices.isEmpty ? [services.first].compactMap { $0 } : activeServices
+
+        let chosen = active.isEmpty ? [services.first].compactMap { $0 } : active
+        logger.info("Active services: \(chosen.joined(separator: ", "), privacy: .public)")
+        return chosen
     }
-    
-    private func executeWithAuthentication(command: String, completion: @escaping (Bool) -> Void) {
-            let context = LAContext()
-            context.localizedReason = "DNS Easy Switcher needs to modify network settings"
-            
-            var error: NSError?
-            if context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error) {
-                context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: "DNS Easy Switcher needs to modify network settings") { success, error in
-                    if success {
-                        DispatchQueue.global(qos: .userInitiated).async {
-                            let task = Process()
-                            task.launchPath = "/bin/bash"
-                            task.arguments = ["-c", command]
-                            
-                            let pipe = Pipe()
-                            task.standardOutput = pipe
-                            
-                            do {
-                                try task.run()
-                                task.waitUntilExit()
-                                
-                                let success = task.terminationStatus == 0
-                                DispatchQueue.main.async { completion(success) }
-                            } catch {
-                                print("Failed to execute command: \(error)")
-                                DispatchQueue.main.async { completion(false) }
+
+    private func getServiceDeviceMap() -> [String: String] {
+        let task = Process()
+        task.launchPath = "/usr/sbin/networksetup"
+        task.arguments = ["-listnetworkserviceorder"]
+
+        let pipe = Pipe()
+        task.standardOutput = pipe
+
+        var map: [String: String] = [:]
+        do {
+            try task.run()
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            if let output = String(data: data, encoding: .utf8) {
+                var currentService: String?
+                for rawLine in output.components(separatedBy: .newlines) {
+                    let line = rawLine.trimmingCharacters(in: .whitespaces)
+                    if line.hasPrefix("(") {
+                        if let range = line.range(of: ") ") {
+                            let name = String(line[range.upperBound...]).trimmingCharacters(in: .whitespaces)
+                            currentService = name
+                        }
+                    } else if line.contains("Device:") {
+                        let parts = line.components(separatedBy: "Device:")
+                        if parts.count >= 2 {
+                            var dev = parts[1].trimmingCharacters(in: .whitespaces)
+                            if let endParen = dev.firstIndex(of: ")") {
+                                dev = String(dev[..<endParen])
+                            }
+                            if let svc = currentService {
+                                map[svc] = dev
                             }
                         }
-                    } else {
-                        print("Authentication failed: \(error?.localizedDescription ?? "Unknown error")")
-                        DispatchQueue.main.async { completion(false) }
-                    }
-                }
-            } else {
-                // Fall back to AppleScript for admin privileges
-                print("Local Authentication not available: \(error?.localizedDescription ?? "Unknown error")")
-                
-                DispatchQueue.global(qos: .userInitiated).async {
-                    let script = """
-                    do shell script "\(command)" with administrator privileges
-                    """
-                    
-                    var scriptError: NSDictionary?
-                    if let scriptObject = NSAppleScript(source: script) {
-                        if scriptObject.executeAndReturnError(&scriptError) != nil {
-                            DispatchQueue.main.async { completion(true) }
-                        } else {
-                            print("AppleScript error: \(scriptError ?? ["error": "Unknown error"] as NSDictionary)")
-                            DispatchQueue.main.async { completion(false) }
-                        }
-                    } else {
-                        DispatchQueue.main.async { completion(false) }
                     }
                 }
             }
+        } catch {
+            logger.error("Failed to get service-device map: \(String(describing: error), privacy: .public)")
         }
-    
-    func setPredefinedDNS(dnsServers: [String], completion: @escaping (Bool) -> Void) {
+        return map
+    }
+
+    private func serviceHasIPv4(_ service: String) -> Bool {
+        let task = Process()
+        task.launchPath = "/usr/sbin/networksetup"
+        task.arguments = ["-getinfo", service]
+
+        let pipe = Pipe()
+        task.standardOutput = pipe
+
+        do {
+            try task.run()
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            if let output = String(data: data, encoding: .utf8) {
+                for rawLine in output.components(separatedBy: .newlines) {
+                    let line = rawLine.trimmingCharacters(in: .whitespaces)
+                    if line.lowercased().hasPrefix("ip address:") {
+                        let value = line.replacingOccurrences(of: "IP address:", with: "").trimmingCharacters(in: .whitespaces)
+                        if !value.isEmpty && value.lowercased() != "none" {
+                            return true
+                        }
+                    }
+                }
+            }
+        } catch {
+            logger.error("Failed to get info for service \(service, privacy: .public): \(String(describing: error), privacy: .public)")
+        }
+        return false
+    }
+
+    private func isDeviceActive(_ device: String) -> Bool {
+        let task = Process()
+        task.launchPath = "/sbin/ifconfig"
+        task.arguments = [device]
+
+        let pipe = Pipe()
+        task.standardOutput = pipe
+        task.standardError = pipe
+
+        do {
+            try task.run()
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            if let output = String(data: data, encoding: .utf8) {
+                if output.contains("status: active") { return true }
+                let hasInet4 = output.contains(" inet ") && !output.contains(" inet 127.0.0.1")
+                let hasInet6 = output.contains(" inet6 ") && !output.contains(" inet6 fe80:")
+                return hasInet4 || hasInet6
+            }
+        } catch {
+            logger.error("Failed to read interface \(device, privacy: .public): \(String(describing: error), privacy: .public)")
+        }
+        return false
+    }
+
+
+    // Execute a shell command with administrator privileges using AppleScript
+    private func executeAdminScript(command: String, completion: @escaping (Bool) -> Void) {
+        DispatchQueue.global(qos: .userInitiated).async {
+            let script = """
+            do shell script "\(command)" with administrator privileges with prompt "DNS Easy Switcher needs to modify network settings"
+            """
+
+            var errorDict: NSDictionary?
+            if let scriptObject = NSAppleScript(source: script) {
+                scriptObject.executeAndReturnError(&errorDict)
+                if errorDict == nil {
+                    DispatchQueue.main.async { completion(true) }
+                } else {
+                    self.logger.error("AppleScript error: \(String(describing: errorDict), privacy: .public)")
+                    DispatchQueue.main.async { completion(false) }
+                }
+            } else {
+                DispatchQueue.main.async { completion(false) }
+            }
+        }
+    }
+
+
+    func setDNS(servers: [String], completion: @escaping (Bool) -> Void) {
         let services = findActiveServices()
         guard !services.isEmpty else {
             completion(false)
             return
         }
-        
-        let dispatchGroup = DispatchGroup()
-        var allSucceeded = true
-        
-        for service in services {
-            dispatchGroup.enter()
-            
-            let dnsArgs = dnsServers.joined(separator: " ")
-            let dnsCommand = "/usr/sbin/networksetup -setdnsservers '\(service)' \(dnsArgs)"
-            let ipv6Command = "/usr/sbin/networksetup -setv6off '\(service)'; /usr/sbin/networksetup -setv6automatic '\(service)'"
-            let fullCommand = "\(dnsCommand); \(ipv6Command)"
-            
-            executeWithAuthentication(command: fullCommand) { success in
-                if !success {
-                    allSucceeded = false
-                }
-                dispatchGroup.leave()
-            }
-        }
-        
-        dispatchGroup.notify(queue: .main) {
-            completion(allSucceeded)
-        }
-    }
-        
-    func setCustomDNS(servers rawServers: [String], completion: @escaping (Bool) -> Void) {
-        let services = findActiveServices()
-        // Allow comma-separated entries in any slot
-        let flattenedServers = rawServers
-            .flatMap { entry in
-                entry
-                    .split(separator: ",")
-                    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            }
-            .filter { !$0.isEmpty }
-        let parsedServers = flattenedServers.compactMap(parseDNSServer)
-        
-        guard !services.isEmpty, !parsedServers.isEmpty else {
-            completion(false)
-            return
-        }
-        
-        let hasCustomPorts = parsedServers.contains { $0.port != nil }
-        
+
+        // Check if any server contains an IPv4 address with port specification
+        let hasPort = servers.contains { $0.contains(".") && $0.contains(":") }
+
         // If no custom ports are specified, use the standard network setup method
-        if !hasCustomPorts {
-            let servers = parsedServers.map { $0.address }
+        if !hasPort {
             setStandardDNS(services: services, servers: servers, completion: completion)
             return
         }
-        
+
         // For DNS servers with custom ports, we need to modify the resolver configuration
-        let resolverContent = createResolverContent(parsedServers)
-        
-        // We'll use the existing executeWithAuthentication method which properly handles
-        // authentication with Touch ID or admin password
-        let createDirCmd = "sudo mkdir -p /etc/resolver"
-        executeWithAuthentication(command: createDirCmd) { dirSuccess in
-            if !dirSuccess {
-                print("Failed to create resolver directory")
+        let resolverContent = createResolverContent(servers)
+
+        let createDirCmd = "/bin/mkdir -p /etc/resolver"
+        executeAdminScript(command: createDirCmd) { [self] dirSuccess in
+            guard dirSuccess else {
+                logger.error("Failed to create resolver directory")
                 completion(false)
                 return
             }
-            
+
             // Now write the resolver content
-            let writeFileCmd = "echo '\(resolverContent)' | sudo tee /etc/resolver/custom > /dev/null"
-            self.executeWithAuthentication(command: writeFileCmd) { fileSuccess in
-                if !fileSuccess {
-                    print("Failed to write resolver configuration")
+            let writeFileCmd = """
+            /usr/bin/tee /etc/resolver/custom > /dev/null <<'EOF'
+            \(resolverContent)
+            EOF
+            """
+            self.executeAdminScript(command: writeFileCmd) { [self] fileSuccess in
+                guard fileSuccess else {
+                    logger.error("Failed to write resolver configuration")
                     completion(false)
                     return
                 }
-                
+
                 // Set permissions
-                let permCmd = "sudo chmod 644 /etc/resolver/custom"
-                self.executeWithAuthentication(command: permCmd) { permSuccess in
+                let permCmd = "/bin/chmod 644 /etc/resolver/custom"
+                self.executeAdminScript(command: permCmd) { [self] permSuccess in
                     if !permSuccess {
-                        print("Failed to set resolver file permissions")
+                        logger.error("Failed to set resolver file permissions")
                         completion(false)
                         return
                     }
-                    
+
                     // Also set standard DNS servers to ensure proper resolution
-                    let standardServers = parsedServers.map { $0.address }
+                    let standardServers = self.formatDNSWithoutPorts(servers)
                     self.setStandardDNS(services: services, servers: standardServers, completion: completion)
                 }
             }
         }
     }
 
-    private func createResolverContent(_ servers: [(address: String, port: Int?)]) -> String {
+    private func createResolverContent(_ servers: [String]) -> String {
         var resolverContent = "# Custom DNS configuration with port\n"
-        
-        for server in servers {
-            resolverContent += "nameserver \(server.address)\n"
-            if let port = server.port {
-                resolverContent += "port \(port)\n"
-            }
-        }
-        
-        return resolverContent
-    }
 
-    private func parseDNSServer(_ input: String) -> (address: String, port: Int?)? {
-        let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return nil }
-        
-        // Support IPv6 with explicit port using bracket notation: [addr]:port
-        if trimmed.hasPrefix("["), let closingBracket = trimmed.firstIndex(of: "]") {
-            let address = String(trimmed[trimmed.index(after: trimmed.startIndex)..<closingBracket])
-            let remainder = trimmed[trimmed.index(after: closingBracket)..<trimmed.endIndex]
-            if remainder.hasPrefix(":") {
-                let portString = remainder.dropFirst()
-                if let port = Int(portString) {
-                    return (address, port)
+        for server in servers {
+            if server.contains(":") {
+                let components = server.components(separatedBy: ":")
+                if components.count == 2, let port = Int(components[1]) {
+                    resolverContent += "nameserver \(components[0])\n"
+                    resolverContent += "port \(port)\n"
                 }
+            } else {
+                resolverContent += "nameserver \(server)\n"
             }
-            return (address, nil)
         }
-        
-        // IPv4 with port (single colon, numeric suffix)
-        let parts = trimmed.split(separator: ":", omittingEmptySubsequences: false)
-        if parts.count == 2,
-           let port = Int(parts[1]),
-           !parts[0].contains(":") {
-            return (String(parts[0]), port)
-        }
-        
-        // IPv6 or plain address with no port
-        return (trimmed, nil)
+
+        logger.info("Custom resolver content:\n\(resolverContent, privacy: .public)")
+        return resolverContent
     }
 
     func disableDNS(completion: @escaping (Bool) -> Void) {
@@ -291,117 +306,98 @@ class DNSManager {
             completion(false)
             return
         }
-        
+
         // Remove any custom resolver configuration
-        let removeResolverCmd = "sudo rm -f /etc/resolver/custom"
-        
-        executeWithAuthentication(command: removeResolverCmd) { _ in
+        let removeResolverCmd = "/bin/rm -f /etc/resolver/custom"
+
+        executeAdminScript(command: removeResolverCmd) { [self] _ in
             // Continue with normal DNS reset regardless of resolver removal success
-            let dispatchGroup = DispatchGroup()
-            var allSucceeded = true
-            
-            for service in services {
-                dispatchGroup.enter()
-                
+        let dispatchGroup = DispatchGroup()
+        var allSucceeded = true
+
+        for service in services {
+            dispatchGroup.enter()
+
                 let command = "/usr/sbin/networksetup -setdnsservers '\(service)' empty"
-                
-                self.executeWithAuthentication(command: command) { success in
+                logger.info("Resetting DNS for service \(service, privacy: .public)")
+
+                self.executeAdminScript(command: command) { [self] success in
                     if !success {
                         allSucceeded = false
+                        logger.error("DNS reset failed for service \(service, privacy: .public)")
+                    } else {
+                        logger.info("DNS reset for service \(service, privacy: .public)")
                     }
                     dispatchGroup.leave()
                 }
             }
-            
+
             dispatchGroup.notify(queue: .main) {
                 completion(allSucceeded)
             }
         }
     }
 
+    // Helper method to get DNS addresses without port specifications
+    private func formatDNSWithoutPorts(_ servers: [String]) -> [String] {
+        var serversWithoutPort: [String] = []
+
+        for server in servers {
+            // Extract IP address without port (only for IPv4 addresses)
+            let components = server.split(separator: ":", omittingEmptySubsequences: false)
+            if components.count == 2 {
+                serversWithoutPort.append(String(components[0]))
+            } else {
+                serversWithoutPort.append(server)
+            }
+        }
+
+        return serversWithoutPort
+    }
+
     // Helper method to set standard DNS settings
     private func setStandardDNS(services: [String], servers: [String], completion: @escaping (Bool) -> Void) {
         let dispatchGroup = DispatchGroup()
         var allSucceeded = true
-        
+
         for service in services {
             dispatchGroup.enter()
-            
+
             let dnsArgs = servers.joined(separator: " ")
             let dnsCommand = "/usr/sbin/networksetup -setdnsservers '\(service)' \(dnsArgs)"
-            let ipv6Command = "/usr/sbin/networksetup -setv6off '\(service)'; /usr/sbin/networksetup -setv6automatic '\(service)'"
-            let fullCommand = "\(dnsCommand); \(ipv6Command)"
-            
-            executeWithAuthentication(command: fullCommand) { success in
+            logger.info("Setting DNS for service \(service, privacy: .public) to \(dnsArgs, privacy: .public)")
+
+            executeAdminScript(command: dnsCommand) { [self] success in
                 if !success {
-                    allSucceeded = false
-                }
-                dispatchGroup.leave()
+                        allSucceeded = false
+                        logger.error("DNS apply failed for service \(service, privacy: .public)")
+                    } else {
+                        logger.info("DNS applied for service \(service, privacy: .public)")
+                    }
+                    dispatchGroup.leave()
             }
         }
-        
+
         dispatchGroup.notify(queue: .main) {
             completion(allSucceeded)
         }
     }
 
-    private func executePrivilegedCommand(arguments: [String]) -> Bool {
-        let services = findActiveServices()
-        guard !services.isEmpty else { return false }
-        
-        var success = true
-        
-        for service in services {
-            // Properly escape the arguments for AppleScript
-            let escapedArgs = arguments.map { arg in
-                return "\\\"" + arg.replacingOccurrences(of: "\\", with: "\\\\")
-                    .replacingOccurrences(of: "\"", with: "\\\"") + "\\\""
-            }.joined(separator: " ")
-            
-            // Combine IPv4 and IPv6 commands in a single script if we're setting DNS
-            let isSettingDNS = arguments[0] == "-setdnsservers"
 
-            let commandScript: String
-            if isSettingDNS {
-                // Combine DNS and IPv6 commands with semicolons in a single admin privilege request
-                let ipv6Script = "/usr/sbin/networksetup -setv6off '\(service)'; /usr/sbin/networksetup -setv6automatic '\(service)'"
-                commandScript = """
-                do shell script "/usr/sbin/networksetup \(escapedArgs); \(ipv6Script)" with administrator privileges with prompt "DNS Easy Switcher needs to modify network settings"
-                """
-            } else {
-                // For other commands, keep as is
-                commandScript = """
-                do shell script "/usr/sbin/networksetup \(escapedArgs)" with administrator privileges with prompt "DNS Easy Switcher needs to modify network settings"
-                """
-            }
-            
-            var error: NSDictionary?
-            if let scriptObject = NSAppleScript(source: commandScript) {
-                if scriptObject.executeAndReturnError(&error) == nil {
-                    if let error = error {
-                        print("Error executing privileged command: \(error)")
-                        success = false
-                    }
-                }
-            } else {
-                success = false
-            }
-        }
-        
-        return success
-    }
-    
     func clearDNSCache(completion: @escaping (Bool) -> Void) {
         let flushCommand = "dscacheutil -flushcache"
-        
-        executeWithAuthentication(command: flushCommand) { success in
+        logger.info("Flushing DNS cache")
+
+        executeAdminScript(command: flushCommand) { success in
             if success {
                 let restartCommand = "killall -HUP mDNSResponder 2>/dev/null || killall -HUP mdnsresponder 2>/dev/null || true"
-                
-                self.executeWithAuthentication(command: restartCommand) { _ in
+
+                self.executeAdminScript(command: restartCommand) { _ in
+                    self.logger.info("DNS cache flushed and mDNSResponder restarted")
                     completion(success)
                 }
             } else {
+                self.logger.error("Failed to flush DNS cache")
                 completion(false)
             }
         }
