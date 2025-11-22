@@ -46,9 +46,14 @@ struct CustomDNSManagerView: View {
                             }
                             Spacer()
                         }
+                        .contentShape(Rectangle())
                         .padding(.vertical, 4)
                         .tag(server.id)
+                        .onTapGesture {
+                            selectedServerID = server.id
+                        }
                         .onTapGesture(count: 2) {
+                            selectedServerID = server.id
                             serverToEdit = server
                         }
                     }
