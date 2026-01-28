@@ -19,6 +19,8 @@ struct MenuBarView: View {
     @State private var aboutWindowController: CustomSheetWindowController?
     @State private var selectedServer: CustomDNSServer?
     @State private var windowController: CustomSheetWindowController?
+    @State private var lastLatencyRefresh: Date?
+    private let latencyRefreshInterval: TimeInterval = 300
     
     var body: some View {
         Group {
@@ -33,7 +35,7 @@ struct MenuBarView: View {
                     }
                 ))
                 .padding(.horizontal)
-                .disabled(isUpdating || isSpeedTesting)
+                .disabled(isUpdating)
                 .overlay(alignment: .trailing) {
                     if isSpeedTesting {
                         ProgressView()
@@ -53,7 +55,7 @@ struct MenuBarView: View {
                     }
                 ))
                 .padding(.horizontal)
-                .disabled(isUpdating || isSpeedTesting)
+                .disabled(isUpdating)
                 .overlay(alignment: .trailing) {
                     if isSpeedTesting {
                         ProgressView()
@@ -73,7 +75,7 @@ struct MenuBarView: View {
                     }
                 ))
                 .padding(.horizontal)
-                .disabled(isUpdating || isSpeedTesting)
+                .disabled(isUpdating)
                 .overlay(alignment: .trailing) {
                     if isSpeedTesting {
                         ProgressView()
@@ -116,7 +118,7 @@ struct MenuBarView: View {
                     }
                 }
                 .padding(.horizontal)
-                .disabled(isUpdating || isSpeedTesting)
+                .disabled(isUpdating)
                 
                 Divider()
                 
@@ -124,14 +126,14 @@ struct MenuBarView: View {
                 if !customServers.isEmpty {
                     Menu {
                         ForEach(customServers) { server in
-                            Button(action: {
-                                activateDNS(type: .custom(server))
-                            }) {
-                                HStack {
-                                    Text(getCustomDNSLabelWithPing(server))
-                                    Spacer()
-                                    if dnsSettings.first?.activeCustomDNSID == server.id {
-                                        Image(systemName: "checkmark")
+                        Button(action: {
+                            activateDNS(type: .custom(server))
+                        }) {
+                            HStack {
+                                Text(getCustomDNSLabelWithPing(server))
+                                Spacer()
+                                if dnsSettings.first?.activeCustomDNSID == server.id {
+                                    Image(systemName: "checkmark")
                                     }
                                 }
                             }
@@ -154,7 +156,7 @@ struct MenuBarView: View {
                         }
                     }
                     .padding(.horizontal)
-                    .disabled(isUpdating || isSpeedTesting)
+                    .disabled(isUpdating)
                     
                     Button(action: {
                         showManageCustomDNSSheet()
@@ -165,7 +167,7 @@ struct MenuBarView: View {
                     .buttonStyle(.plain)
                     .padding(.horizontal)
                     .padding(.vertical, 5)
-                    .disabled(isSpeedTesting)
+                    .disabled(isUpdating)
                 }
                 
                 Button(action: {
@@ -177,12 +179,12 @@ struct MenuBarView: View {
                 .buttonStyle(.bordered)
                 .padding(.horizontal)
                 .padding(.vertical, 5)
-                .disabled(isSpeedTesting)
+                .disabled(isUpdating)
                 
                 Divider()
                 
                 Button("Disable DNS Override") {
-                    if !isUpdating && !isSpeedTesting {
+                    if !isUpdating {
                         isUpdating = true
                         DNSManager.shared.disableDNS { success in
                             if success {
@@ -195,7 +197,7 @@ struct MenuBarView: View {
                     }
                 }
                 .padding(.vertical, 5)
-                .disabled(isUpdating || isSpeedTesting)
+                .disabled(isUpdating)
                 
                 // Speed Test Button
                 Button(action: {
@@ -215,7 +217,7 @@ struct MenuBarView: View {
                 .buttonStyle(.bordered)
                 .padding(.horizontal)
                 .padding(.vertical, 5)
-                .disabled(isUpdating || isSpeedTesting)
+                .disabled(isUpdating)
                 
                 Button(action: {
                     clearDNSCache()
@@ -252,25 +254,31 @@ struct MenuBarView: View {
         }
         .onAppear {
             ensureSettingsExist()
+            refreshLatencyIfNeeded(force: false)
+        }
+        .onChange(of: customServers.count) { _ in
+            refreshLatencyIfNeeded(force: true)
         }
     }
     
     // Helper methods for getting ping results
     private func getLabelWithPing(_ baseLabel: String, dnsType: DNSType) -> String {
-        guard !pingResults.isEmpty else { return baseLabel }
+        if pingResults.isEmpty {
+            return isSpeedTesting ? "\(baseLabel) (measuring…)" : baseLabel
+        }
         
         switch dnsType {
         case .cloudflare:
             if let result = pingResults.first(where: { $0.dnsName == "Cloudflare" }) {
-                return "\(baseLabel) (\(Int(result.responseTime))ms)"
+                return "\(baseLabel) \(latencyEmoji(for: result)) (\(latencyText(for: result)))"
             }
         case .quad9:
             if let result = pingResults.first(where: { $0.dnsName == "Quad9" }) {
-                return "\(baseLabel) (\(Int(result.responseTime))ms)"
+                return "\(baseLabel) \(latencyEmoji(for: result)) (\(latencyText(for: result)))"
             }
         case .adguard:
             if let result = pingResults.first(where: { $0.dnsName == "AdGuard" }) {
-                return "\(baseLabel) (\(Int(result.responseTime))ms)"
+                return "\(baseLabel) \(latencyEmoji(for: result)) (\(latencyText(for: result)))"
             }
         default:
             break
@@ -280,34 +288,71 @@ struct MenuBarView: View {
     }
     
     private func getGetflixLabelWithPing(_ location: String) -> String {
-        guard !pingResults.isEmpty else { return location }
+        if pingResults.isEmpty {
+            return isSpeedTesting ? "\(location) (measuring…)" : location
+        }
         
         if let result = pingResults.first(where: { $0.dnsName == "Getflix: \(location)" }) {
-            return "\(location) (\(Int(result.responseTime))ms)"
+            return "\(location) \(latencyEmoji(for: result)) (\(latencyText(for: result)))"
         }
         
         return location
     }
     
     private func getCustomDNSLabelWithPing(_ server: CustomDNSServer) -> String {
-        guard !pingResults.isEmpty else { return server.name }
+        if pingResults.isEmpty {
+            return isSpeedTesting ? "\(server.name) (measuring…)" : server.name
+        }
         
         if let result = pingResults.first(where: { $0.isCustom && $0.customID == server.id }) {
-            return "\(server.name) (\(Int(result.responseTime))ms)"
+            return "\(server.name) \(latencyEmoji(for: result)) (\(latencyText(for: result)))"
         }
         
         return server.name
     }
     
+    private func latencyText(for result: DNSSpeedTester.PingResult) -> String {
+        result.isSuccess ? "\(Int(result.responseTime))ms" : "timeout"
+    }
+    
+    private func latencyEmoji(for result: DNSSpeedTester.PingResult) -> String {
+        guard result.isSuccess else { return "🔴" }
+        let ms = result.responseTime
+        if ms <= 30 {
+            return "🟢"
+        } else if ms <= 80 {
+            return "🟡"
+        } else if ms <= 150 {
+            return "🟠"
+        } else {
+            return "🔴"
+        }
+    }
+    
     // Run DNS speed test
     private func runSpeedTest() {
+        runSpeedTest(clearResults: true, force: true)
+    }
+    
+    private func refreshLatencyIfNeeded(force: Bool) {
+        runSpeedTest(clearResults: false, force: force)
+    }
+    
+    private func runSpeedTest(clearResults: Bool, force: Bool) {
         guard !isSpeedTesting else { return }
+        if !force, let lastRefresh = lastLatencyRefresh,
+           Date().timeIntervalSince(lastRefresh) < latencyRefreshInterval {
+            return
+        }
         
         isSpeedTesting = true
-        pingResults = []
+        if clearResults {
+            pingResults = []
+        }
         
         DNSSpeedTester.shared.testAllDNS(customServers: customServers) { results in
             self.pingResults = results
+            self.lastLatencyRefresh = Date()
             self.isSpeedTesting = false
         }
     }
@@ -558,7 +603,7 @@ struct MenuBarView: View {
     }
     
     private func clearDNSCache() {
-        if !isUpdating && !isSpeedTesting {
+        if !isUpdating {
             isUpdating = true
             DNSManager.shared.clearDNSCache { success in
                 DispatchQueue.main.async {
