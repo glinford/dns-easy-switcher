@@ -11,6 +11,18 @@ import LocalAuthentication
 
 class DNSManager {
     static let shared = DNSManager()
+
+    struct PresetProvider: Identifiable, Equatable {
+        let id: String
+        let name: String
+        let servers: [String]
+        let capabilities: [String]
+
+        var displayName: String {
+            guard !capabilities.isEmpty else { return name }
+            return "\(name) (\(capabilities.joined(separator: ", ")))"
+        }
+    }
     
     let cloudflareServers = [
         "1.1.1.1",           // IPv4 Primary
@@ -32,6 +44,148 @@ class DNSManager {
         "2a10:50c0::ad1:ff",  // IPv6 Primary
         "2a10:50c0::ad2:ff"   // IPv6 Secondary
     ]
+
+    let googleServers = [
+        "8.8.8.8",            // IPv4 Primary
+        "8.8.4.4",            // IPv4 Secondary
+        "2001:4860:4860::8888", // IPv6 Primary
+        "2001:4860:4860::8844"  // IPv6 Secondary
+    ]
+
+    let opendnsHomeServers = [
+        "208.67.222.222",     // IPv4 Primary
+        "208.67.220.220",     // IPv4 Secondary
+        "208.67.222.220",     // IPv4 Tertiary
+        "208.67.220.222",     // IPv4 Quaternary
+        "2620:119:35::35",    // IPv6 Primary
+        "2620:119:53::53"     // IPv6 Secondary
+    ]
+
+    let opendnsFamilyServers = [
+        "208.67.222.123",     // IPv4 Primary
+        "208.67.220.123",     // IPv4 Secondary
+        "2620:119:35::123",   // IPv6 Primary
+        "2620:119:53::123"    // IPv6 Secondary
+    ]
+
+    let level3Servers = [
+        "4.2.2.1",            // IPv4 Primary
+        "4.2.2.2"             // IPv4 Secondary
+    ]
+
+    let comodoServers = [
+        "8.26.56.26",         // IPv4 Primary
+        "8.20.247.20"         // IPv4 Secondary
+    ]
+
+    let quad9UnfilteredServers = [
+        "9.9.9.10",           // IPv4 Primary
+        "149.112.112.10",     // IPv4 Secondary
+        "2620:fe::10",        // IPv6 Primary
+        "2620:fe::fe:10"      // IPv6 Secondary
+    ]
+
+    let quad9EcsServers = [
+        "9.9.9.11",           // IPv4 Primary
+        "149.112.112.11",     // IPv4 Secondary
+        "2620:fe::11",        // IPv6 Primary
+        "2620:fe::fe:11"      // IPv6 Secondary
+    ]
+
+    let cloudflareMalwareServers = [
+        "1.1.1.2",            // IPv4 Primary
+        "1.0.0.2",            // IPv4 Secondary
+        "2606:4700:4700::1112", // IPv6 Primary
+        "2606:4700:4700::1002"  // IPv6 Secondary
+    ]
+
+    let cloudflareFamilyServers = [
+        "1.1.1.3",            // IPv4 Primary
+        "1.0.0.3",            // IPv4 Secondary
+        "2606:4700:4700::1113", // IPv6 Primary
+        "2606:4700:4700::1003"  // IPv6 Secondary
+    ]
+
+    var presetProviders: [PresetProvider] {
+        [
+            PresetProvider(
+                id: "cloudflare",
+                name: "Cloudflare",
+                servers: cloudflareServers,
+                capabilities: ["privacy"]
+            ),
+            PresetProvider(
+                id: "quad9",
+                name: "Quad9",
+                servers: quad9Servers,
+                capabilities: ["filtered"]
+            ),
+            PresetProvider(
+                id: "adguard",
+                name: "AdGuard",
+                servers: adguardServers,
+                capabilities: ["adblock"]
+            ),
+            PresetProvider(
+                id: "google",
+                name: "Google",
+                servers: googleServers,
+                capabilities: ["default"]
+            ),
+            PresetProvider(
+                id: "opendns-home",
+                name: "OpenDNS Home",
+                servers: opendnsHomeServers,
+                capabilities: ["phishing"]
+            ),
+            PresetProvider(
+                id: "opendns-family",
+                name: "OpenDNS FamilyShield",
+                servers: opendnsFamilyServers,
+                capabilities: ["family", "phishing", "malware"]
+            ),
+            PresetProvider(
+                id: "level3",
+                name: "Level3",
+                servers: level3Servers,
+                capabilities: ["unfiltered", "redirect"]
+            ),
+            PresetProvider(
+                id: "comodo",
+                name: "Comodo",
+                servers: comodoServers,
+                capabilities: ["malware", "phishing", "spyware"]
+            ),
+            PresetProvider(
+                id: "quad9-unfiltered",
+                name: "Quad9",
+                servers: quad9UnfilteredServers,
+                capabilities: ["unfiltered", "noDNSSEC"]
+            ),
+            PresetProvider(
+                id: "quad9-ecs",
+                name: "Quad9",
+                servers: quad9EcsServers,
+                capabilities: ["filtered", "ECS"]
+            ),
+            PresetProvider(
+                id: "cloudflare-malware",
+                name: "Cloudflare",
+                servers: cloudflareMalwareServers,
+                capabilities: ["malware"]
+            ),
+            PresetProvider(
+                id: "cloudflare-family",
+                name: "Cloudflare",
+                servers: cloudflareFamilyServers,
+                capabilities: ["malware", "adult"]
+            )
+        ]
+    }
+
+    func presetProvider(id: String) -> PresetProvider? {
+        presetProviders.first { $0.id == id }
+    }
     
     let getflixServers: [String: String] = [
         "Australia — Melbourne": "118.127.62.178",

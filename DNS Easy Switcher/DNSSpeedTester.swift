@@ -18,14 +18,16 @@ class DNSSpeedTester {
         let server: String
         let responseTime: Double // in milliseconds
         let isSuccess: Bool
+        let presetID: String?
         let isCustom: Bool
         let customID: String?
         
-        init(dnsName: String, server: String, responseTime: Double, isSuccess: Bool, isCustom: Bool = false, customID: String? = nil) {
+        init(dnsName: String, server: String, responseTime: Double, isSuccess: Bool, presetID: String? = nil, isCustom: Bool = false, customID: String? = nil) {
             self.dnsName = dnsName
             self.server = server
             self.responseTime = responseTime
             self.isSuccess = isSuccess
+            self.presetID = presetID
             self.isCustom = isCustom
             self.customID = customID
         }
@@ -48,20 +50,23 @@ class DNSSpeedTester {
         
         let dnsManager = DNSManager.shared
         
-        var allDNSToTest: [(String, String, Bool, String?)] = [
-            ("Cloudflare", dnsManager.cloudflareServers[0], false, nil),
-            ("Quad9", dnsManager.quad9Servers[0], false, nil),
-            ("AdGuard", dnsManager.adguardServers[0], false, nil)
-        ]
+        var allDNSToTest: [(String, String, String?, Bool, String?)] = []
+
+        // Add preset providers from the shared list (first server per provider)
+        for provider in dnsManager.presetProviders {
+            if let firstServer = provider.servers.first {
+                allDNSToTest.append((provider.name, firstServer, provider.id, false, nil))
+            }
+        }
         
         // Add all Getflix servers
         let getflixServers = dnsManager.getflixServers.sorted(by: { $0.key < $1.key })
-        allDNSToTest.append(contentsOf: getflixServers.map { ("Getflix: \($0.key)", $0.value, false, nil) })
+        allDNSToTest.append(contentsOf: getflixServers.map { ("Getflix: \($0.key)", $0.value, "getflix:\($0.key)", false, nil) })
         
         // Add custom DNS servers (first entry only to keep test time reasonable)
         for server in customServers {
             if let firstEntry = server.dnsEntries.first {
-                allDNSToTest.append((server.name, firstEntry, true, server.id))
+                allDNSToTest.append((server.name, firstEntry, nil, true, server.id))
             }
         }
         
@@ -75,7 +80,7 @@ class DNSSpeedTester {
         // Create a semaphore to limit concurrent operations
         let semaphore = DispatchSemaphore(value: 5) // Allow 5 concurrent pings
         
-        for (index, (name, server, isCustom, customID)) in allDNSToTest.enumerated() {
+        for (index, (name, server, presetID, isCustom, customID)) in allDNSToTest.enumerated() {
             group.enter()
             
             // Add a small delay between tests to avoid overwhelming the system
@@ -96,6 +101,7 @@ class DNSSpeedTester {
                             server: server,
                             responseTime: responseTime,
                             isSuccess: isSuccess,
+                            presetID: presetID,
                             isCustom: isCustom,
                             customID: customID
                         )
