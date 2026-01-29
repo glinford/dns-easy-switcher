@@ -9,9 +9,9 @@ import SwiftUI
 import AppKit
 
 class CustomSheetWindowController: NSWindowController {
-    convenience init(view: some View, title: String) {
+    convenience init(view: some View, title: String, size: NSSize = NSSize(width: 300, height: 200)) {
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 300, height: 200),
+            contentRect: NSRect(x: 0, y: 0, width: size.width, height: size.height),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
