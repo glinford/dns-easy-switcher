@@ -45,13 +45,6 @@ class DNSManager {
         "2a10:50c0::ad2:ff"   // IPv6 Secondary
     ]
 
-    let googleServers = [
-        "8.8.8.8",            // IPv4 Primary
-        "8.8.4.4",            // IPv4 Secondary
-        "2001:4860:4860::8888", // IPv6 Primary
-        "2001:4860:4860::8844"  // IPv6 Secondary
-    ]
-
     let opendnsHomeServers = [
         "208.67.222.222",     // IPv4 Primary
         "208.67.220.220",     // IPv4 Secondary
@@ -125,12 +118,6 @@ class DNSManager {
                 name: "AdGuard",
                 servers: adguardServers,
                 capabilities: ["adblock"]
-            ),
-            PresetProvider(
-                id: "google",
-                name: "Google",
-                servers: googleServers,
-                capabilities: ["default"]
             ),
             PresetProvider(
                 id: "opendns-home",
