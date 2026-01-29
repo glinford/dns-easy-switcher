@@ -20,8 +20,6 @@ struct CustomDNSHubView: View {
     let autoActivateOnAdd: Bool
     let onUse: (CustomDNSServer) -> Void
     let onDisableActive: () -> Void
-    let onClose: () -> Void
-
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \CustomDNSServer.name) private var customServers: [CustomDNSServer]
 
@@ -330,7 +328,7 @@ struct CustomDNSHubView: View {
                 quaternaryDNS: quaternaryDNS
             )
             modelContext.insert(server)
-            try? modelContext.save()
+            saveContext(errorMessage: "Failed to save new DNS server")
             select(server)
             if autoActivateOnAdd {
                 onUse(server)
@@ -341,7 +339,7 @@ struct CustomDNSHubView: View {
             server.secondaryDNS = secondaryDNS
             server.tertiaryDNS = tertiaryDNS
             server.quaternaryDNS = quaternaryDNS
-            try? modelContext.save()
+            saveContext(errorMessage: "Failed to save DNS server changes")
 
             if activeCustomID == server.id {
                 onUse(server)
@@ -351,7 +349,7 @@ struct CustomDNSHubView: View {
 
     private func delete(_ server: CustomDNSServer) {
         modelContext.delete(server)
-        try? modelContext.save()
+        saveContext(errorMessage: "Failed to save after deleting DNS server")
 
         if activeCustomID == server.id {
             onDisableActive()
@@ -360,6 +358,14 @@ struct CustomDNSHubView: View {
         pendingDelete = nil
         DispatchQueue.main.async {
             synchronizeSelection()
+        }
+    }
+
+    private func saveContext(errorMessage: String) {
+        do {
+            try modelContext.save()
+        } catch {
+            print("\(errorMessage): \(error)")
         }
     }
 

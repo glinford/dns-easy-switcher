@@ -319,18 +319,17 @@ struct MenuBarView: View {
                     isUpdating = false
                 }
             },
-            onClose: {
-                windowController?.close()
-                windowController = nil
-            }
         )
         .environment(\.modelContext, modelContext)
         .modelContainer(modelContext.container)
-        
+
         windowController = CustomSheetWindowController(
             view: view,
             title: "Custom DNS",
-            size: NSSize(width: 720, height: 460)
+            size: NSSize(width: 720, height: 460),
+            onClose: {
+                self.windowController = nil
+            }
         )
         windowController?.window?.level = .floating
         windowController?.showWindow(nil)
