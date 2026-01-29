@@ -19,12 +19,17 @@ struct MenuBarView: View {
     @State private var aboutWindowController: CustomSheetWindowController?
     @State private var selectedServer: CustomDNSServer?
     @State private var windowController: CustomSheetWindowController?
+
+    private var additionalProviders: [DNSManager.PresetProvider] {
+        let excluded = Set(["cloudflare", "quad9", "adguard"])
+        return DNSManager.shared.presetProviders.filter { !excluded.contains($0.id) }
+    }
     
     var body: some View {
         Group {
             VStack {
                 // Cloudflare DNS
-                Toggle(getLabelWithPing("Cloudflare DNS", dnsType: .cloudflare), isOn: Binding(
+                Toggle(labelForPreset(id: "cloudflare", fallback: "Cloudflare DNS"), isOn: Binding(
                     get: { dnsSettings.first?.isCloudflareEnabled ?? false },
                     set: { newValue in
                         if newValue && !isUpdating {
@@ -44,7 +49,7 @@ struct MenuBarView: View {
                 }
                 
                 // Quad9 DNS
-                Toggle(getLabelWithPing("Quad9 DNS", dnsType: .quad9), isOn: Binding(
+                Toggle(labelForPreset(id: "quad9", fallback: "Quad9 DNS"), isOn: Binding(
                     get: { dnsSettings.first?.isQuad9Enabled ?? false },
                     set: { newValue in
                         if newValue && !isUpdating {
@@ -64,7 +69,7 @@ struct MenuBarView: View {
                 }
                 
                 // AdGuard DNS
-                Toggle(getLabelWithPing("AdGuard DNS", dnsType: .adguard), isOn: Binding(
+                Toggle(labelForPreset(id: "adguard", fallback: "AdGuard DNS"), isOn: Binding(
                     get: { dnsSettings.first?.isAdGuardEnabled ?? false },
                     set: { newValue in
                         if newValue && !isUpdating {
@@ -83,6 +88,44 @@ struct MenuBarView: View {
                     }
                 }
                 
+                // Additional DNS providers
+                if !additionalProviders.isEmpty {
+                    Menu {
+                        ForEach(additionalProviders) { provider in
+                            Button(action: {
+                                activateDNS(type: .preset(provider.id))
+                            }) {
+                                HStack {
+                                    Text(labelWithPing(provider.displayName, presetID: provider.id))
+                                    Spacer()
+                                    if dnsSettings.first?.activePresetID == provider.id {
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
+                        }
+                    } label: {
+                        HStack {
+                            Text("More DNS")
+                            Spacer()
+                            if let activePresetID = dnsSettings.first?.activePresetID,
+                               additionalProviders.contains(where: { $0.id == activePresetID }) {
+                                Circle()
+                                    .fill(Color.green)
+                                    .frame(width: 8, height: 8)
+                            }
+                            if isSpeedTesting {
+                                ProgressView()
+                                    .scaleEffect(0.6)
+                                    .frame(width: 12, height: 12)
+                                    .padding(.trailing, 4)
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
+                    .disabled(isUpdating || isSpeedTesting)
+                }
+
                 // GetFlix DNS Menu
                 Menu {
                     ForEach(Array(DNSManager.shared.getflixServers.keys.sorted()), id: \.self) { location in
@@ -256,47 +299,36 @@ struct MenuBarView: View {
     }
     
     // Helper methods for getting ping results
-    private func getLabelWithPing(_ baseLabel: String, dnsType: DNSType) -> String {
+    private func labelForPreset(id: String, fallback: String) -> String {
+        let baseLabel = DNSManager.shared.presetProvider(id: id)?.displayName ?? fallback
+        return labelWithPing(baseLabel, presetID: id)
+    }
+
+    private func labelWithPing(_ baseLabel: String, presetID: String?) -> String {
         guard !pingResults.isEmpty else { return baseLabel }
-        
-        switch dnsType {
-        case .cloudflare:
-            if let result = pingResults.first(where: { $0.dnsName == "Cloudflare" }) {
-                return "\(baseLabel) (\(Int(result.responseTime))ms)"
-            }
-        case .quad9:
-            if let result = pingResults.first(where: { $0.dnsName == "Quad9" }) {
-                return "\(baseLabel) (\(Int(result.responseTime))ms)"
-            }
-        case .adguard:
-            if let result = pingResults.first(where: { $0.dnsName == "AdGuard" }) {
-                return "\(baseLabel) (\(Int(result.responseTime))ms)"
-            }
-        default:
-            break
+        if let presetID = presetID,
+           let result = pingResults.first(where: { $0.presetID == presetID }) {
+            return "\(baseLabel) (\(latencyText(for: result)))"
         }
-        
         return baseLabel
     }
     
     private func getGetflixLabelWithPing(_ location: String) -> String {
-        guard !pingResults.isEmpty else { return location }
-        
-        if let result = pingResults.first(where: { $0.dnsName == "Getflix: \(location)" }) {
-            return "\(location) (\(Int(result.responseTime))ms)"
-        }
-        
-        return location
+        labelWithPing(location, presetID: "getflix:\(location)")
     }
     
     private func getCustomDNSLabelWithPing(_ server: CustomDNSServer) -> String {
         guard !pingResults.isEmpty else { return server.name }
         
         if let result = pingResults.first(where: { $0.isCustom && $0.customID == server.id }) {
-            return "\(server.name) (\(Int(result.responseTime))ms)"
+            return "\(server.name) (\(latencyText(for: result)))"
         }
         
         return server.name
+    }
+
+    private func latencyText(for result: DNSSpeedTester.PingResult) -> String {
+        result.isSuccess ? "\(Int(result.responseTime))ms" : "timeout"
     }
     
     // Run DNS speed test
@@ -448,6 +480,7 @@ struct MenuBarView: View {
         case cloudflare
         case quad9
         case adguard
+        case preset(String)
         case custom(CustomDNSServer)
         case getflix(String)
         
@@ -461,6 +494,8 @@ struct MenuBarView: View {
                 return true
             case (.adguard, .adguard):
                 return true
+            case (.preset(let lID), .preset(let rID)):
+                return lID == rID
             case (.custom(let lServer), .custom(let rServer)):
                 return lServer.id == rServer.id
             case (.getflix(let lLocation), .getflix(let rLocation)):
@@ -502,6 +537,19 @@ struct MenuBarView: View {
                 }
                 isUpdating = false
             }
+        case .preset(let presetID):
+            guard let provider = DNSManager.shared.presetProvider(id: presetID) else {
+                isUpdating = false
+                return
+            }
+            DNSManager.shared.setPredefinedDNS(dnsServers: provider.servers) { success in
+                if success {
+                    Task { @MainActor in
+                        updateSettings(type: type)
+                    }
+                }
+                isUpdating = false
+            }
         case .custom(let server):
             DNSManager.shared.setCustomDNS(servers: server.dnsEntries) { success in
                 if success {
@@ -530,9 +578,24 @@ struct MenuBarView: View {
     
     private func updateSettings(type: DNSType) {
         if let settings = dnsSettings.first {
-            settings.isCloudflareEnabled = (type == .cloudflare)
-            settings.isQuad9Enabled = (type == .quad9)
-            settings.isAdGuardEnabled = type == .adguard ? true : nil
+            let presetID: String?
+            switch type {
+            case .cloudflare:
+                presetID = "cloudflare"
+            case .quad9:
+                presetID = "quad9"
+            case .adguard:
+                presetID = "adguard"
+            case .preset(let id):
+                presetID = id
+            default:
+                presetID = nil
+            }
+
+            settings.activePresetID = presetID
+            settings.isCloudflareEnabled = (presetID == "cloudflare")
+            settings.isQuad9Enabled = (presetID == "quad9")
+            settings.isAdGuardEnabled = (presetID == "adguard")
             
             if case .getflix(let location) = type {
                 settings.activeGetFlixLocation = location
