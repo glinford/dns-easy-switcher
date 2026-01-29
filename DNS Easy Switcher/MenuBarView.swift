@@ -20,7 +20,25 @@ struct MenuBarView: View {
     @State private var selectedServer: CustomDNSServer?
     @State private var windowController: CustomSheetWindowController?
     @State private var lastLatencyRefresh: Date?
-    private let latencyRefreshInterval: TimeInterval = 300
+
+    private enum Latency {
+        static let refreshInterval: TimeInterval = 300
+        static let goodMs: Double = 30
+        static let okMs: Double = 80
+        static let slowMs: Double = 150
+    }
+
+    private enum UIConstants {
+        static let indicatorSize: CGFloat = 8
+        static let progressScale: CGFloat = 0.6
+        static let progressSize: CGFloat = 12
+        static let progressPadding: CGFloat = 8
+        static let buttonProgressScale: CGFloat = 0.8
+        static let buttonProgressSize: CGFloat = 16
+        static let windowInsetX: CGFloat = 20
+        static let windowInsetY: CGFloat = 40
+        static let menuProgressPadding: CGFloat = 4
+    }
     
     var body: some View {
         Group {
@@ -39,9 +57,9 @@ struct MenuBarView: View {
                 .overlay(alignment: .trailing) {
                     if isSpeedTesting {
                         ProgressView()
-                            .scaleEffect(0.6)
-                            .frame(width: 12, height: 12)
-                            .padding(.trailing, 8)
+                            .scaleEffect(UIConstants.progressScale)
+                            .frame(width: UIConstants.progressSize, height: UIConstants.progressSize)
+                            .padding(.trailing, UIConstants.progressPadding)
                     }
                 }
                 
@@ -59,9 +77,9 @@ struct MenuBarView: View {
                 .overlay(alignment: .trailing) {
                     if isSpeedTesting {
                         ProgressView()
-                            .scaleEffect(0.6)
-                            .frame(width: 12, height: 12)
-                            .padding(.trailing, 8)
+                            .scaleEffect(UIConstants.progressScale)
+                            .frame(width: UIConstants.progressSize, height: UIConstants.progressSize)
+                            .padding(.trailing, UIConstants.progressPadding)
                     }
                 }
                 
@@ -79,9 +97,9 @@ struct MenuBarView: View {
                 .overlay(alignment: .trailing) {
                     if isSpeedTesting {
                         ProgressView()
-                            .scaleEffect(0.6)
-                            .frame(width: 12, height: 12)
-                            .padding(.trailing, 8)
+                            .scaleEffect(UIConstants.progressScale)
+                            .frame(width: UIConstants.progressSize, height: UIConstants.progressSize)
+                            .padding(.trailing, UIConstants.progressPadding)
                     }
                 }
                 
@@ -107,13 +125,13 @@ struct MenuBarView: View {
                         if let activeLocation = dnsSettings.first?.activeGetFlixLocation {
                             Circle()
                                 .fill(Color.green)
-                                .frame(width: 8, height: 8)
+                                .frame(width: UIConstants.indicatorSize, height: UIConstants.indicatorSize)
                         }
                         if isSpeedTesting {
                             ProgressView()
-                                .scaleEffect(0.6)
-                                .frame(width: 12, height: 12)
-                                .padding(.trailing, 4)
+                                .scaleEffect(UIConstants.progressScale)
+                                .frame(width: UIConstants.progressSize, height: UIConstants.progressSize)
+                                .padding(.trailing, UIConstants.menuProgressPadding)
                         }
                     }
                 }
@@ -145,13 +163,13 @@ struct MenuBarView: View {
                             if dnsSettings.first?.activeCustomDNSID != nil {
                                 Circle()
                                     .fill(Color.green)
-                                    .frame(width: 8, height: 8)
+                                    .frame(width: UIConstants.indicatorSize, height: UIConstants.indicatorSize)
                             }
                             if isSpeedTesting {
                                 ProgressView()
-                                    .scaleEffect(0.6)
-                                    .frame(width: 12, height: 12)
-                                    .padding(.trailing, 4)
+                                    .scaleEffect(UIConstants.progressScale)
+                                    .frame(width: UIConstants.progressSize, height: UIConstants.progressSize)
+                                    .padding(.trailing, UIConstants.menuProgressPadding)
                             }
                         }
                     }
@@ -208,8 +226,8 @@ struct MenuBarView: View {
                         if isSpeedTesting {
                             Spacer()
                             ProgressView()
-                                .scaleEffect(0.8)
-                                .frame(width: 16, height: 16)
+                                .scaleEffect(UIConstants.buttonProgressScale)
+                                .frame(width: UIConstants.buttonProgressSize, height: UIConstants.buttonProgressSize)
                         }
                     }
                     .frame(maxWidth: .infinity)
@@ -217,7 +235,7 @@ struct MenuBarView: View {
                 .buttonStyle(.bordered)
                 .padding(.horizontal)
                 .padding(.vertical, 5)
-                .disabled(isUpdating)
+                .disabled(isUpdating || isSpeedTesting)
                 
                 Button(action: {
                     clearDNSCache()
@@ -227,8 +245,8 @@ struct MenuBarView: View {
                         if isUpdating {
                             Spacer()
                             ProgressView()
-                                .scaleEffect(0.8)
-                                .frame(width: 16, height: 16)
+                                .scaleEffect(UIConstants.buttonProgressScale)
+                                .frame(width: UIConstants.buttonProgressSize, height: UIConstants.buttonProgressSize)
                         }
                     }
                     .frame(maxWidth: .infinity)
@@ -236,7 +254,7 @@ struct MenuBarView: View {
                 .buttonStyle(.bordered)
                 .padding(.horizontal)
                 .padding(.vertical, 5)
-                .disabled(isUpdating || isSpeedTesting)
+                .disabled(isUpdating)
                 
                 Divider()
 
@@ -256,7 +274,7 @@ struct MenuBarView: View {
             ensureSettingsExist()
             refreshLatencyIfNeeded(force: false)
         }
-        .onChange(of: customServers.count) { _ in
+        .onChange(of: customServers.count, initial: false) { _, _ in
             refreshLatencyIfNeeded(force: true)
         }
     }
@@ -318,11 +336,11 @@ struct MenuBarView: View {
     private func latencyEmoji(for result: DNSSpeedTester.PingResult) -> String {
         guard result.isSuccess else { return "🔴" }
         let ms = result.responseTime
-        if ms <= 30 {
+        if ms <= Latency.goodMs {
             return "🟢"
-        } else if ms <= 80 {
+        } else if ms <= Latency.okMs {
             return "🟡"
-        } else if ms <= 150 {
+        } else if ms <= Latency.slowMs {
             return "🟠"
         } else {
             return "🔴"
@@ -341,7 +359,7 @@ struct MenuBarView: View {
     private func runSpeedTest(clearResults: Bool, force: Bool) {
         guard !isSpeedTesting else { return }
         if !force, let lastRefresh = lastLatencyRefresh,
-           Date().timeIntervalSince(lastRefresh) < latencyRefreshInterval {
+           Date().timeIntervalSince(lastRefresh) < Latency.refreshInterval {
             return
         }
         
@@ -378,8 +396,8 @@ struct MenuBarView: View {
            let screenFrame = NSScreen.main?.frame {
             let windowFrame = window.frame
             let newOrigin = NSPoint(
-                x: screenFrame.width - windowFrame.width - 20,
-                y: screenFrame.height - 40 - windowFrame.height
+                x: screenFrame.width - windowFrame.width - UIConstants.windowInsetX,
+                y: screenFrame.height - UIConstants.windowInsetY - windowFrame.height
             )
             window.setFrameTopLeftPoint(newOrigin)
         }
@@ -429,8 +447,8 @@ struct MenuBarView: View {
            let screenFrame = NSScreen.main?.frame {
             let windowFrame = window.frame
             let newOrigin = NSPoint(
-                x: screenFrame.width - windowFrame.width - 20,
-                y: screenFrame.height - 40 - windowFrame.height
+                x: screenFrame.width - windowFrame.width - UIConstants.windowInsetX,
+                y: screenFrame.height - UIConstants.windowInsetY - windowFrame.height
             )
             window.setFrameTopLeftPoint(newOrigin)
         }
@@ -481,8 +499,8 @@ struct MenuBarView: View {
            let screenFrame = NSScreen.main?.frame {
             let windowFrame = window.frame
             let newOrigin = NSPoint(
-                x: screenFrame.width - windowFrame.width - 20,
-                y: screenFrame.height - 40 - windowFrame.height
+                x: screenFrame.width - windowFrame.width - UIConstants.windowInsetX,
+                y: screenFrame.height - UIConstants.windowInsetY - windowFrame.height
             )
             window.setFrameTopLeftPoint(newOrigin)
         }
