@@ -8,10 +8,12 @@
 import SwiftUI
 import AppKit
 
-class CustomSheetWindowController: NSWindowController {
-    convenience init(view: some View, title: String) {
+class CustomSheetWindowController: NSWindowController, NSWindowDelegate {
+    private var onClose: (() -> Void)?
+
+    convenience init(view: some View, title: String, size: NSSize = NSSize(width: 300, height: 200), onClose: (() -> Void)? = nil) {
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 300, height: 200),
+            contentRect: NSRect(x: 0, y: 0, width: size.width, height: size.height),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
@@ -21,5 +23,12 @@ class CustomSheetWindowController: NSWindowController {
         window.contentView = NSHostingView(rootView: view)
         window.isReleasedWhenClosed = false
         self.init(window: window)
+        window.delegate = self
+        self.onClose = onClose
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        onClose?()
+        onClose = nil
     }
 }

@@ -138,6 +138,11 @@ class DNSSpeedTester {
         isCurrentlyTesting = false
     }
     
+    // Ping a single DNS server (used for the custom DNS editor test button)
+    func testServer(server: String, completion: @escaping (Double, Bool) -> Void) {
+        pingServer(server: server, completion: completion)
+    }
+    
     // Clean up when app is terminating
     func cleanup() {
         cancelTests()

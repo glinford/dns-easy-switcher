@@ -14,10 +14,7 @@ struct MenuBarView: View {
     @State private var isUpdating = false
     @State private var isSpeedTesting = false
     @State private var pingResults: [DNSSpeedTester.PingResult] = []
-    @State private var showingAddDNS = false
-    @State private var showingManageDNS = false
     @State private var aboutWindowController: CustomSheetWindowController?
-    @State private var selectedServer: CustomDNSServer?
     @State private var windowController: CustomSheetWindowController?
     
     var body: some View {
@@ -156,28 +153,19 @@ struct MenuBarView: View {
                     .padding(.horizontal)
                     .disabled(isUpdating || isSpeedTesting)
                     
-                    Button(action: {
-                        showManageCustomDNSSheet()
-                    }) {
-                        Text("Manage Custom DNS")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.horizontal)
-                    .padding(.vertical, 5)
-                    .disabled(isSpeedTesting)
                 }
                 
                 Button(action: {
-                    showAddCustomDNSSheet()
+                    let mode: CustomDNSHubView.Mode = customServers.isEmpty ? .add : .manage
+                    showCustomDNSSheet(mode: mode)
                 }) {
-                    Text("Add Custom DNS")
+                    Text("Add/Edit Custom DNS")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
                 .padding(.horizontal)
                 .padding(.vertical, 5)
-                .disabled(isSpeedTesting)
+                .disabled(isUpdating)
                 
                 Divider()
                 
@@ -312,70 +300,37 @@ struct MenuBarView: View {
         }
     }
     
-    private func showAddCustomDNSSheet() {
-        let addView = AddCustomDNSView { newServer in
-            if let newServer = newServer {
-                modelContext.insert(newServer)
-                try? modelContext.save()
-                // Automatically activate the new DNS
-                activateDNS(type: .custom(newServer))
-            }
-            windowController?.close()
-            windowController = nil
-        }
-        
-        windowController = CustomSheetWindowController(view: addView, title: "Add Custom DNS")
-        windowController?.window?.level = .floating
-        windowController?.showWindow(nil)
-        
-        // Position the window relative to the menu bar
-        if let window = windowController?.window,
-           let screenFrame = NSScreen.main?.frame {
-            let windowFrame = window.frame
-            let newOrigin = NSPoint(
-                x: screenFrame.width - windowFrame.width - 20,
-                y: screenFrame.height - 40 - windowFrame.height
-            )
-            window.setFrameTopLeftPoint(newOrigin)
-        }
-    }
-    
-    private func showManageCustomDNSSheet() {
-        let manageView = CustomDNSManagerView(customServers: customServers, onAction: { action, server in
-            switch action {
-            case .edit:
-                editCustomDNS(server)
-            case .delete:
-                modelContext.delete(server)
-                try? modelContext.save()
-                
-                // If this was the active server, disable DNS
-                if dnsSettings.first?.activeCustomDNSID == server.id {
-                    isUpdating = true
-                    DNSManager.shared.disableDNS { success in
-                        if success {
-                            Task { @MainActor in
-                                updateSettings(type: .none)
-                            }
-                        }
-                        isUpdating = false
-                    }
-                }
-            case .use:
+    private func showCustomDNSSheet(mode: CustomDNSHubView.Mode) {
+        let view = CustomDNSHubView(
+            initialMode: mode,
+            activeCustomID: dnsSettings.first?.activeCustomDNSID,
+            autoActivateOnAdd: mode == .add,
+            onUse: { server in
                 activateDNS(type: .custom(server))
+            },
+            onDisableActive: {
+                isUpdating = true
+                DNSManager.shared.disableDNS { success in
+                    if success {
+                        Task { @MainActor in
+                            updateSettings(type: .none)
+                        }
+                    }
+                    isUpdating = false
+                }
+            },
+        )
+        .environment(\.modelContext, modelContext)
+        .modelContainer(modelContext.container)
+
+        windowController = CustomSheetWindowController(
+            view: view,
+            title: "Custom DNS",
+            size: NSSize(width: 720, height: 460),
+            onClose: {
+                self.windowController = nil
             }
-            
-            // Don't close the window for .use or .edit actions
-            if action == .delete {
-                windowController?.close()
-                windowController = nil
-            }
-        }, onClose: {
-            windowController?.close()
-            windowController = nil
-        })
-        
-        windowController = CustomSheetWindowController(view: manageView, title: "Manage Custom DNS")
+        )
         windowController?.window?.level = .floating
         windowController?.showWindow(nil)
         
@@ -404,44 +359,7 @@ struct MenuBarView: View {
         aboutWindowController?.window?.center()
     }
     
-    private func editCustomDNS(_ server: CustomDNSServer) {
-        let editView = EditCustomDNSView(server: server) { updatedServer in
-            if let updatedServer = updatedServer {
-                // Update existing server properties
-                server.name = updatedServer.name
-                server.primaryDNS = updatedServer.primaryDNS
-                server.secondaryDNS = updatedServer.secondaryDNS
-                server.tertiaryDNS = updatedServer.tertiaryDNS
-                server.quaternaryDNS = updatedServer.quaternaryDNS
-                try? modelContext.save()
-                
-                // If this was the active server, update DNS settings
-                if dnsSettings.first?.activeCustomDNSID == server.id {
-                    activateDNS(type: .custom(server))
-                }
-            }
-            
-            windowController?.close()
-            windowController = nil
-        }
-        
-        windowController?.close()
-        
-        windowController = CustomSheetWindowController(view: editView, title: "Edit Custom DNS")
-        windowController?.window?.level = .floating
-        windowController?.showWindow(nil)
-        
-        // Position the window relative to the menu bar
-        if let window = windowController?.window,
-           let screenFrame = NSScreen.main?.frame {
-            let windowFrame = window.frame
-            let newOrigin = NSPoint(
-                x: screenFrame.width - windowFrame.width - 20,
-                y: screenFrame.height - 40 - windowFrame.height
-            )
-            window.setFrameTopLeftPoint(newOrigin)
-        }
-    }
+    
     
     enum DNSType: Equatable {
         case none
