@@ -44,6 +44,7 @@ final class DNSSettings {
     var timestamp: Date
     var activeGetFlixLocation: String?
     var isAdGuardEnabled: Bool?
+    var activeDNS4EUVariant: String?
     
     init(id: String = UUID().uuidString,
          isCloudflareEnabled: Bool = false,
@@ -51,13 +52,15 @@ final class DNSSettings {
          activeCustomDNSID: String? = nil,
          timestamp: Date = Date(),
          isAdGuardEnabled: Bool? = false,
-         activeGetFlixLocation: String? = nil) {
+         activeGetFlixLocation: String? = nil,
+         activeDNS4EUVariant: String? = nil) {
         self.id = id
         self.isCloudflareEnabled = isCloudflareEnabled
         self.isQuad9Enabled = isQuad9Enabled
         self.activeCustomDNSID = activeCustomDNSID
         self.timestamp = timestamp
         self.isAdGuardEnabled = isAdGuardEnabled
+        self.activeDNS4EUVariant = activeDNS4EUVariant
     }
 }
 

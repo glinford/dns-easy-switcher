@@ -32,6 +32,29 @@ class DNSManager {
         "2a10:50c0::ad1:ff",  // IPv6 Primary
         "2a10:50c0::ad2:ff"   // IPv6 Secondary
     ]
+
+    let dns4euServers: [String: [String]] = [
+        "Protective": [
+            "86.54.11.1", "86.54.11.201",
+            "2a13:1001::86:54:11:1", "2a13:1001::86:54:11:201"
+        ],
+        "Protective + Child Protection": [
+            "86.54.11.12", "86.54.11.212",
+            "2a13:1001::86:54:11:12", "2a13:1001::86:54:11:212"
+        ],
+        "Protective + Ad Blocking": [
+            "86.54.11.13", "86.54.11.213",
+            "2a13:1001::86:54:11:13", "2a13:1001::86:54:11:213"
+        ],
+        "Protective + Child Protection + Ad Blocking": [
+            "86.54.11.11", "86.54.11.211",
+            "2a13:1001::86:54:11:11", "2a13:1001::86:54:11:211"
+        ],
+        "Unfiltered": [
+            "86.54.11.100", "86.54.11.200",
+            "2a13:1001::86:54:11:100", "2a13:1001::86:54:11:200"
+        ]
+    ]
     
     let getflixServers: [String: String] = [
         "Australia — Melbourne": "118.127.62.178",
