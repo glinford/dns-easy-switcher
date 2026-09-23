@@ -53,6 +53,12 @@ class DNSSpeedTester {
             ("Quad9", dnsManager.quad9Servers[0], false, nil),
             ("AdGuard", dnsManager.adguardServers[0], false, nil)
         ]
+
+        for (variant, servers) in dnsManager.dns4euServers {
+            if let firstServer = servers.first {
+                allDNSToTest.append(("DNS4EU: \(variant)", firstServer, false, nil))
+            }
+        }
         
         // Add all Getflix servers
         let getflixServers = dnsManager.getflixServers.sorted(by: { $0.key < $1.key })

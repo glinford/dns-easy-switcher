@@ -83,6 +83,41 @@ struct MenuBarView: View {
                     }
                 }
                 
+                // DNS4EU variants
+                Menu {
+                    ForEach(DNSManager.shared.dns4euServers.keys.sorted(), id: \.self) { variant in
+                        Button(action: {
+                            activateDNS(type: .dns4eu(variant))
+                        }) {
+                            HStack {
+                                Text(variant)
+                                Spacer()
+                                if dnsSettings.first?.activeDNS4EUVariant == variant {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    HStack {
+                        Text("DNS4EU")
+                        Spacer()
+                        if dnsSettings.first?.activeDNS4EUVariant != nil {
+                            Circle()
+                                .fill(Color.green)
+                                .frame(width: 8, height: 8)
+                        }
+                        if isSpeedTesting {
+                            ProgressView()
+                                .scaleEffect(0.6)
+                                .frame(width: 12, height: 12)
+                                .padding(.trailing, 4)
+                        }
+                    }
+                }
+                .padding(.horizontal)
+                .disabled(isUpdating || isSpeedTesting)
+
                 // GetFlix DNS Menu
                 Menu {
                     ForEach(Array(DNSManager.shared.getflixServers.keys.sorted()), id: \.self) { location in
@@ -272,6 +307,10 @@ struct MenuBarView: View {
             if let result = pingResults.first(where: { $0.dnsName == "AdGuard" }) {
                 return "\(baseLabel) (\(Int(result.responseTime))ms)"
             }
+        case .dns4eu(let variant):
+            if let result = pingResults.first(where: { $0.dnsName == "DNS4EU: \(variant)" }) {
+                return "\(baseLabel) (\(Int(result.responseTime))ms)"
+            }
         default:
             break
         }
@@ -448,6 +487,7 @@ struct MenuBarView: View {
         case cloudflare
         case quad9
         case adguard
+        case dns4eu(String)
         case custom(CustomDNSServer)
         case getflix(String)
         
@@ -461,6 +501,8 @@ struct MenuBarView: View {
                 return true
             case (.adguard, .adguard):
                 return true
+            case (.dns4eu(let lhsVariant), .dns4eu(let rhsVariant)):
+                return lhsVariant == rhsVariant
             case (.custom(let lServer), .custom(let rServer)):
                 return lServer.id == rServer.id
             case (.getflix(let lLocation), .getflix(let rLocation)):
@@ -502,6 +544,19 @@ struct MenuBarView: View {
                 }
                 isUpdating = false
             }
+        case .dns4eu(let variant):
+            if let servers = DNSManager.shared.dns4euServers[variant] {
+                DNSManager.shared.setPredefinedDNS(dnsServers: servers) { success in
+                    if success {
+                        Task { @MainActor in
+                            updateSettings(type: type)
+                        }
+                    }
+                    isUpdating = false
+                }
+            } else {
+                isUpdating = false
+            }
         case .custom(let server):
             DNSManager.shared.setCustomDNS(servers: server.dnsEntries) { success in
                 if success {
@@ -533,6 +588,12 @@ struct MenuBarView: View {
             settings.isCloudflareEnabled = (type == .cloudflare)
             settings.isQuad9Enabled = (type == .quad9)
             settings.isAdGuardEnabled = type == .adguard ? true : nil
+
+            if case .dns4eu(let variant) = type {
+                settings.activeDNS4EUVariant = variant
+            } else {
+                settings.activeDNS4EUVariant = nil
+            }
             
             if case .getflix(let location) = type {
                 settings.activeGetFlixLocation = location

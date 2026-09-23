@@ -98,6 +98,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 - [Quad9](https://quad9.net) for their secure DNS service
 - [AdGuard DNS](https://adguard-dns.io/en/welcome.html) for their privacy-focused DNS service with ad blocking capabilities
 - [GetFlix](https://www.getflix.com.au/setup/dns-servers/)
+- [DNS4EU](https://joindns4.eu/for-public) for their EU-hosted, privacy focused DNS service with ad blocking and parental controls
 
 ## Privacy
 
